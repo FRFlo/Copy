@@ -1,0 +1,21 @@
+name: 🔍 Help Request
+description: Request help with a problem or question
+title: "🔍 <title>"
+labels: ["Enhancement"]
+body:
+- type: checkboxes
+  attributes:
+    label: Is there an existing issue for this?
+    description: Please search to see if an issue already exists for the bug you encountered.
+    options:
+    - label: I have searched the existing issues
+      required: true
+- type: textarea
+  attributes:
+    label: Proposal
+    description: |
+      What do you need help with? Please provide as much detail as possible.
+
+      Tip: You can attach images or other files by clicking this area to highlight it and then dragging files in.
+  validations:
+    required: true
