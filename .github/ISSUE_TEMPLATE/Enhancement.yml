@@ -1,21 +1,21 @@
 name: ⚒️ Enhancement Proposal
 description: Propose an enhancement to the project
 title: "⚒️ <title>"
-labels: ["Enhancement"]
+labels: ["enhancement"]
 body:
-- type: checkboxes
-  attributes:
-    label: Is there an existing issue for this?
-    description: Please search to see if an issue already exists for the enhancement you are proposing.
-    options:
-    - label: I have searched the existing issues
-      required: true
-- type: textarea
-  attributes:
-    label: Proposal
-    description: |
-      A concise description of the enhancement you are proposing.
+  - type: checkboxes
+    attributes:
+      label: Is there an existing issue for this?
+      description: Please search to see if an issue already exists for the enhancement you are proposing.
+      options:
+        - label: I have searched the existing issues
+          required: true
+  - type: textarea
+    attributes:
+      label: Proposal
+      description: |
+        A concise description of the enhancement you are proposing.
 
-      Tip: You can attach images or other files by clicking this area to highlight it and then dragging files in.
-  validations:
-    required: true
+        Tip: You can attach images or other files by clicking this area to highlight it and then dragging files in.
+    validations:
+      required: true
