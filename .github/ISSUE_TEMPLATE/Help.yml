@@ -1,7 +1,7 @@
 name: 🔍 Help Request
 description: Request help with a problem or question
 title: "🔍 <title>"
-labels: ["Enhancement"]
+labels: ["help", "question"]
 body:
 - type: checkboxes
   attributes:

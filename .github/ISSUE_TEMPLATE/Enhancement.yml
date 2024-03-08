@@ -1,7 +1,7 @@
 name: ⚒️ Enhancement Proposal
 description: Propose an enhancement to the project
 title: "⚒️ <title>"
-labels: ["Enhancement"]
+labels: ["enhancement"]
 body:
 - type: checkboxes
   attributes:
