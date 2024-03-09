@@ -17,9 +17,7 @@ namespace Copy.Clients
         /// FTP client.
         /// </summary>
         private readonly FtpClient FtpClient;
-        /// <summary>
-        /// Client credentials.
-        /// </summary>
+
         public Client Credentials => _credentials;
 
         /// <summary>
