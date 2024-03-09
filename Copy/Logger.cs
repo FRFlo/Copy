@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace CSBase
+namespace Copy
 {
     /// <summary>
     /// Logger class.
