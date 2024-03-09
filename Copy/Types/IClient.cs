@@ -3,7 +3,7 @@
     /// <summary>
     /// Interface for a client used to copy, delete, and list files.
     /// </summary>
-    internal interface IClient
+    internal interface IClient : IDisposable
     {
         /// <summary>
         /// Client credentials.
@@ -15,6 +15,12 @@
         /// <param name="path">Path to the directory.</param>
         /// <returns>Array of file names.</returns>
         string[] ListFiles(string path);
+        /// <summary>
+        /// Check if a file exists.
+        /// </summary>
+        /// <param name="path">Path to the directory.</param>
+        /// <returns>True if the file exists, false otherwise.</returns>
+        bool DoFileExist(string path);
         /// <summary>
         /// Get a file.
         /// </summary>
