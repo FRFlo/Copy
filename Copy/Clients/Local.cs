@@ -1,6 +1,4 @@
 ﻿using Copy.Types;
-using System;
-using System.IO;
 
 namespace Copy.Clients
 {
@@ -43,6 +41,12 @@ namespace Copy.Clients
 
         public Stream GetFile(string path)
         {
+            string directory = Path.GetDirectoryName(path) ?? throw new ArgumentNullException($"Impossible to get directory from {path}");
+            if (!Directory.Exists(directory))
+            {
+                Logger.Error($"Directory {directory} does not exist");
+                throw new DirectoryNotFoundException($"Directory {directory} does not exist");
+            }
             if (!DoFileExist(path))
             {
                 Logger.Error($"File {path} does not exist");
@@ -54,6 +58,12 @@ namespace Copy.Clients
 
         public void PutFile(string path, Stream stream)
         {
+            string directory = Path.GetDirectoryName(path) ?? throw new ArgumentNullException($"Impossible to get directory from {path}");
+            if (!Directory.Exists(directory))
+            {
+                Logger.Warn($"Directory {directory} does not exist, creating");
+                Directory.CreateDirectory(directory);
+            }
             if (DoFileExist(path)) Logger.Warn($"File {path} already exists, overwriting");
 
             using var fileStream = File.Create(path);
@@ -62,6 +72,12 @@ namespace Copy.Clients
 
         public void DeleteFile(string path)
         {
+            string directory = Path.GetDirectoryName(path) ?? throw new ArgumentNullException($"Impossible to get directory from {path}");
+            if (!Directory.Exists(directory))
+            {
+                Logger.Error($"Directory {directory} does not exist");
+                throw new DirectoryNotFoundException($"Directory {directory} does not exist");
+            }
             if (!DoFileExist(path)) Logger.Warn($"File {path} does not exist");
 
             File.Delete(path);

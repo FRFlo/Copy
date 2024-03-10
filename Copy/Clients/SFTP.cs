@@ -42,6 +42,12 @@ namespace Copy.Clients
 
         public Stream GetFile(string path)
         {
+            string directory = Path.GetDirectoryName(path) ?? throw new ArgumentNullException($"Impossible to get directory from {path}");
+            if (!SftpClient.Exists(directory))
+            {
+                Logger.Error($"Directory {directory} does not exist");
+                throw new DirectoryNotFoundException($"Directory {directory} does not exist");
+            }
             if (!DoFileExist(path))
             {
                 Logger.Error($"File {path} does not exist");
@@ -56,6 +62,12 @@ namespace Copy.Clients
 
         public void PutFile(string path, Stream stream)
         {
+            string directory = Path.GetDirectoryName(path) ?? throw new ArgumentNullException($"Impossible to get directory from {path}");
+            if (!SftpClient.Exists(directory))
+            {
+                Logger.Warn($"Directory {directory} does not exist, creating");
+                SftpClient.CreateDirectory(directory);
+            }
             if (DoFileExist(path)) Logger.Warn($"File {path} already exists, overwriting");
 
             SftpClient.UploadFile(stream, path, true);
@@ -63,6 +75,12 @@ namespace Copy.Clients
 
         public void DeleteFile(string path)
         {
+            string directory = Path.GetDirectoryName(path) ?? throw new ArgumentNullException($"Impossible to get directory from {path}");
+            if (!SftpClient.Exists(directory))
+            {
+                Logger.Error($"Directory {directory} does not exist");
+                throw new DirectoryNotFoundException($"Directory {directory} does not exist");
+            }
             if (!DoFileExist(path)) Logger.Warn($"File {path} does not exist");
 
             SftpClient.DeleteFile(path);
