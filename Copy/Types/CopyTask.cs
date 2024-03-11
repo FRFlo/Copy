@@ -31,6 +31,6 @@ namespace Copy.Types
         /// Filter for files to copy.
         /// </summary>
         [JsonProperty(PropertyName = "Filter", Required = Required.DisallowNull)]
-        public string Filter { get; set; } = ".*";
+        public CopyFilter Filter { get; set; } = new();
     }
 }
