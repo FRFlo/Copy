@@ -11,11 +11,13 @@
 		<PackageId>FRFlo.Copy</PackageId>
 		<Authors>FRFlo</Authors>
 		<Description>Copy software scoped for professional use</Description>
+		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
 	</PropertyGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="FluentFTP" Version="49.0.2" />
 	  <PackageReference Include="Microsoft.Exchange.WebServices" Version="2.2.0" />
+	  <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.6" />
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 	  <PackageReference Include="Newtonsoft.Json.Schema" Version="3.0.15" />
 	  <PackageReference Include="SSH.NET" Version="2024.0.0" />
