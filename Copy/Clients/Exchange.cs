@@ -35,7 +35,7 @@ namespace Copy.Clients
             throw new NotImplementedException();
         }
 
-        public string[] ListFiles(string path)
+        public string[] ListFiles(string path, CopyFilter filter)
         {
             throw new NotImplementedException();
         }

@@ -1,5 +1,6 @@
 ﻿using Copy.Types;
 using Renci.SshNet;
+using System.Text.RegularExpressions;
 
 namespace Copy.Clients
 {
@@ -23,7 +24,7 @@ namespace Copy.Clients
             SftpClient.Connect();
         }
 
-        public string[] ListFiles(string path)
+        public string[] ListFiles(string path, CopyFilter filter)
         {
             if (!SftpClient.Exists(path))
             {
@@ -31,7 +32,13 @@ namespace Copy.Clients
                 throw new DirectoryNotFoundException($"Directory {path} does not exist");
             }
 
-            var files = SftpClient.ListDirectory(path);
+            if (filter.Author != ".*") Logger.Warn($"Filtering by author is not supported by SFTP");
+
+            Regex nameRegex = new(filter.Name);
+            Regex authorRegex = new(filter.Author);
+
+            var files = SftpClient.ListDirectory(path)
+                .Where(f => nameRegex.IsMatch(f.Name) && f.LastWriteTime >= filter.CreatedAfter && (ulong)f.Length <= filter.MaxSize && (ulong)f.Length >= filter.MinSize);
             return files.Select(f => f.FullName.Remove(0, 1)).ToArray();
         }
 

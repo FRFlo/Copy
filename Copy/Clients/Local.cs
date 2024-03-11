@@ -1,4 +1,7 @@
 ﻿using Copy.Types;
+using System.Runtime.Versioning;
+using System.Security.Principal;
+using System.Text.RegularExpressions;
 
 namespace Copy.Clients
 {
@@ -28,7 +31,8 @@ namespace Copy.Clients
             return File.Exists(path);
         }
 
-        public string[] ListFiles(string path)
+        [SupportedOSPlatform("windows")]
+        public string[] ListFiles(string path, CopyFilter filter)
         {
             if (!Directory.Exists(path))
             {
@@ -36,7 +40,17 @@ namespace Copy.Clients
                 throw new DirectoryNotFoundException($"Directory {path} does not exist");
             }
 
-            return Directory.GetFiles(path);
+            Regex nameRegex = new(filter.Name);
+            Regex authorRegex = new(filter.Author);
+
+            return Directory.GetFiles(path)
+                .Where(f =>
+                {
+                    FileInfo fileInfo = new(f);
+                    bool authorMatch = authorRegex.IsMatch(fileInfo.GetAccessControl().GetOwner(typeof(NTAccount))?.Value ?? throw new FileOwnerNotFoundException($"Impossible to get owner of {f}"));
+                    return nameRegex.IsMatch(Path.GetFileName(f)) && authorMatch && File.GetCreationTime(f) >= filter.CreatedAfter && (ulong)fileInfo.Length <= filter.MaxSize && (ulong)fileInfo.Length >= filter.MinSize;
+                })
+                .ToArray();
         }
 
         public Stream GetFile(string path)
