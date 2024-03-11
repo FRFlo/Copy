@@ -1,16 +1,12 @@
 ﻿using System.Text;
 
-namespace CSBase
+namespace Copy
 {
     /// <summary>
     /// Logger class.
     /// </summary>
     public static class Logger
     {
-        /// <summary>
-        /// Indicates if the program is in debug mode.
-        /// </summary>
-        public static bool IsDebug { get; set; } = false;
         /// <summary>
         /// Path to the log file.
         /// <list type="bullet">
@@ -44,7 +40,7 @@ namespace CSBase
                 message = message[..^1];
             }
 
-            if (prefix != "DEBUG" || IsDebug)
+            if (prefix != "DEBUG" || Program.Config.Debug)
             {
                 foreach (string line in message.Split('\n'))
                 {
