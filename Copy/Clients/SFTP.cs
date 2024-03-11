@@ -32,7 +32,7 @@ namespace Copy.Clients
             }
 
             var files = SftpClient.ListDirectory(path);
-            return files.Select(f => f.Name).ToArray();
+            return files.Select(f => f.FullName.Remove(0, 1)).ToArray();
         }
 
         public bool DoFileExist(string path)
