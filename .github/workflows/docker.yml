@@ -54,6 +54,6 @@ jobs:
       - name: Push to Docker Hub
         run: |
             docker tag ghcr.io/${{ steps.vars.outputs.username }}:${{ steps.vars.outputs.short_sha }} ${{ steps.vars.outputs.username }}:${{ steps.vars.outputs.short_sha }}
-            docker push ghcr.io/${{ steps.vars.outputs.username }}:${{ steps.vars.outputs.short_sha }}
+            docker push ${{ steps.vars.outputs.username }}:${{ steps.vars.outputs.short_sha }}
             docker tag ghcr.io/${{ steps.vars.outputs.username }}:${{ steps.vars.outputs.short_sha }} ${{ steps.vars.outputs.username }}:latest
-            docker push ghcr.io/${{ steps.vars.outputs.username }}:latest
+            docker push ${{ steps.vars.outputs.username }}:latest
