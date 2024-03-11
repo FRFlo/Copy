@@ -111,7 +111,10 @@ namespace Copy
                         Source = "source",
                         Destination = "destination",
                         Client = "SFTP",
-                        Filter = "*.txt"
+                        Filter = new CopyFilter()
+                        {
+                            Name = ".*\\.txt"
+                        }
                     },
                     new CopyTask()
                     {
@@ -119,7 +122,10 @@ namespace Copy
                         Destination = "destination",
                         Client = "Local",
                         Delete = true,
-                        Filter = "*.txt"
+                        Filter = new CopyFilter()
+                        {
+                            Name = ".*\\.txt"
+                        }
                     },
                     new CopyTask()
                     {
