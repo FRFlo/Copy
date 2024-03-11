@@ -24,8 +24,8 @@ jobs:
         id: vars
         run: |
           calculatedSha=$(git rev-parse --short ${{ github.sha }})
-          echo "::set-output name=short_sha::$calculatedSha"
-          echo "::set-output name=username::$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')"
+          echo "short_sha=$calculatedSha" >> $GITHUB_OUTPUT
+            echo "username=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
