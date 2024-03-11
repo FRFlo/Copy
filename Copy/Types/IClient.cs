@@ -13,8 +13,9 @@
         /// List files in a directory.
         /// </summary>
         /// <param name="path">Path to the directory.</param>
+        /// <param name="filter">Filter for files to list.</param>
         /// <returns>Array of file names.</returns>
-        string[] ListFiles(string path);
+        string[] ListFiles(string path, CopyFilter filter);
         /// <summary>
         /// Check if a file exists.
         /// </summary>
