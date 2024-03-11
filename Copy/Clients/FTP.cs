@@ -28,6 +28,7 @@ namespace Copy.Clients
         {
             _credentials = credentials;
             FtpClient = new FtpClient(credentials.Host, new NetworkCredential(credentials.Username, credentials.Password), credentials.Port);
+            FtpClient.Config.EncryptionMode = FtpEncryptionMode.Auto;
             FtpClient.AutoConnect();
         }
 
