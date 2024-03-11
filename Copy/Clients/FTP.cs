@@ -1,6 +1,7 @@
 ﻿using Copy.Types;
 using FluentFTP;
 using System.Net;
+using System.Text.RegularExpressions;
 
 namespace Copy.Clients
 {
@@ -37,7 +38,7 @@ namespace Copy.Clients
             return FtpClient.FileExists(path);
         }
 
-        public string[] ListFiles(string path)
+        public string[] ListFiles(string path, CopyFilter filter)
         {
             if (!FtpClient.DirectoryExists(path))
             {
@@ -45,7 +46,12 @@ namespace Copy.Clients
                 throw new DirectoryNotFoundException($"Directory {path} does not exist");
             }
 
-            FtpListItem[] files = FtpClient.GetListing(path);
+            Regex nameRegex = new(filter.Name);
+            Regex authorRegex = new(filter.Author);
+
+            FtpListItem[] files = FtpClient.GetListing(path)
+                .Where(f => nameRegex.IsMatch(f.Name) && authorRegex.IsMatch(f.RawOwner) && f.Created >= filter.CreatedAfter && (ulong)f.Size <= filter.MaxSize && (ulong)f.Size >= filter.MinSize)
+                .ToArray();
             return files.Select(f => Path.Combine(path, f.Name)).ToArray();
         }
 
