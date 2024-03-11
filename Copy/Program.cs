@@ -1,6 +1,5 @@
 ﻿using Copy.Clients;
 using Copy.Types;
-using System.Text.RegularExpressions;
 
 namespace Copy
 {
@@ -63,10 +62,9 @@ namespace Copy
                     throw new ClientNotFoundException($"Client {task.Source} not found");
                 }
 
-                Regex filter = new(task.Filter);
-                IEnumerable<string> files = client.ListFiles(task.Source).Where(f => filter.IsMatch(f));
+                string[] files = client.ListFiles(task.Source, task.Filter);
 
-                Logger.Info($"Treating {files.Count()} files");
+                Logger.Info($"Treating {files.Length} files");
 
                 foreach (string file in files)
                 {
@@ -86,7 +84,7 @@ namespace Copy
                     Logger.Debug($"Copied {file} to {task.Destination}");
                 }
 
-                Logger.Info($"Copied {files.Count()} files from {task.Source} to {task.Destination} using {task.Client}");
+                Logger.Info($"Copied {files.Length} files from {task.Source} to {task.Destination} using {task.Client}");
             }
 
             Logger.Info("All tasks executed");
