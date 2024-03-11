@@ -8,10 +8,6 @@ namespace Copy
     public static class Logger
     {
         /// <summary>
-        /// Indicates if the program is in debug mode.
-        /// </summary>
-        public static bool IsDebug { get; set; } = false;
-        /// <summary>
         /// Path to the log file.
         /// <list type="bullet">
         /// <item><description>In debug mode, it is located in the program folder with the name "debug.log".</description></item>
@@ -44,7 +40,7 @@ namespace Copy
                 message = message[..^1];
             }
 
-            if (prefix != "DEBUG" || IsDebug)
+            if (prefix != "DEBUG" || Program.Config.Debug)
             {
                 foreach (string line in message.Split('\n'))
                 {
