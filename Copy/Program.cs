@@ -1,4 +1,4 @@
-﻿namespace Copy
+namespace Copy
 {
     internal class Program
     {
@@ -10,10 +10,12 @@
                 switch (args[0])
                 {
                     case "config":
+                        Logger.Info("Creating default config and scheme files");
                         File.WriteAllText(Config.SchemePath, Config.GetScheme());
                         File.WriteAllText(Config.ConfigPath, Config.GetDefault());
                         break;
                     default:
+                        Logger.Info($"Using config file {args[0]}");
                         Config.ConfigPath = args[0];
                         break;
                 }
