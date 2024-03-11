@@ -45,7 +45,7 @@ namespace Copy.Clients
             }
 
             FtpListItem[] files = FtpClient.GetListing(path);
-            return files.Select(f => f.Name).ToArray();
+            return files.Select(f => Path.Combine(path, f.Name)).ToArray();
         }
 
         public Stream GetFile(string path)
