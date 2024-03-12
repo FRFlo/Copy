@@ -14,7 +14,7 @@ namespace Copy.Clients
         /// </summary>
         private readonly ExchangeService ExchangeService;
 
-        public Client config => _credentials;
+        public Client Config => _credentials;
 
         /// <summary>
         /// Constructor.

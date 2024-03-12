@@ -8,7 +8,7 @@
         /// <summary>
         /// Client configuration.
         /// </summary>
-        Client config { get; }
+        Client Config { get; }
         /// <summary>
         /// List files in a directory.
         /// </summary>
