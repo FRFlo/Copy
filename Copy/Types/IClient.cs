@@ -15,41 +15,41 @@
         /// <param name="path">Path to the directory.</param>
         /// <param name="filter">Filter for files to list.</param>
         /// <returns>Array of file names.</returns>
-        string[] ListFiles(string path, CopyFilter filter);
+        ListResult[] ListFiles(string path, CopyFilter filter);
         /// <summary>
-        /// Check if a file exists.
+        /// Check if a element exists.
         /// </summary>
-        /// <param name="path">Path to the directory.</param>
-        /// <returns>True if the file exists, false otherwise.</returns>
-        bool DoFileExist(string path);
+        /// <param name="element">Element.</param>
+        /// <returns>True if the element exists, false otherwise.</returns>
+        bool DoFileExist(ListResult element);
         /// <summary>
         /// Get a file.
         /// </summary>
-        /// <param name="path">Path to the file.</param>
+        /// <param name="element">Element.</param>
         /// <returns>Stream of the file.</returns>
-        Stream GetFile(string path);
+        Stream GetFile(ListResult element);
         /// <summary>
         /// Put a file.
         /// </summary>
-        /// <param name="path">Path to the file.</param>
+        /// <param name="element">Element.</param>
         /// <param name="stream">Stream of the file.</param>
-        void PutFile(string path, Stream stream);
+        void PutFile(ListResult element, Stream stream);
         /// <summary>
-        /// Move a file.
+        /// Move a element.
         /// </summary>
-        /// <param name="sourcePath">Path to the source file.</param>
-        /// <param name="destinationPath">Path to the destination file.</param>
-        void MoveFile(string sourcePath, string destinationPath);
+        /// <param name="sourceElement">The source element.</param>
+        /// <param name="destinationElement">The destination element.</param>
+        void MoveElement(ListResult sourceElement, ListResult destinationElement);
         /// <summary>
-        /// Copy a file.
+        /// Copy a element.
         /// </summary>
-        /// <param name="sourcePath">Path to the source file.</param>
-        /// <param name="destinationPath">Path to the destination file.</param>
-        void CopyFile(string sourcePath, string destinationPath);
+        /// <param name="sourceElement">Path to the source file.</param>
+        /// <param name="destinationElement">Path to the destination file.</param>
+        void CopyElement(ListResult sourceElement, ListResult destinationElement);
         /// <summary>
-        /// Delete a file.
+        /// Delete a element.
         /// </summary>
-        /// <param name="path">Path to the file.</param>
-        void DeleteFile(string path);
+        /// <param name="element">Element.</param>
+        void DeleteElement(ListResult element);
     }
 }

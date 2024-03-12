@@ -42,37 +42,37 @@ namespace Copy.Clients
             }
         }
 
-        public bool DoFileExist(string path)
+        public bool DoFileExist(ListResult element)
         {
             throw new NotImplementedException();
         }
 
-        public string[] ListFiles(string path, CopyFilter filter)
+        public ListResult[] ListFiles(string path, CopyFilter filter)
         {
             throw new NotImplementedException();
         }
 
-        public Stream GetFile(string path)
+        public Stream GetFile(ListResult element)
         {
             throw new NotImplementedException();
         }
 
-        public void PutFile(string path, Stream stream)
+        public void PutFile(ListResult element, Stream stream)
         {
             throw new NotImplementedException();
         }
 
-        public void MoveFile(string sourcePath, string destinationPath)
+        public void MoveElement(ListResult sourceElement, ListResult destinationElement)
         {
             throw new NotImplementedException();
         }
 
-        public void CopyFile(string sourcePath, string destinationPath)
+        public void CopyElement(ListResult sourceElement, ListResult destinationElement)
         {
             throw new NotImplementedException();
         }
 
-        public void DeleteFile(string path)
+        public void DeleteElement(ListResult element)
         {
             throw new NotImplementedException();
         }

@@ -70,13 +70,13 @@ namespace Copy
                 bool sameClient = task.Source.Client == task.Destination.Client;
                 Logger.Debug($"Source and destination {(sameClient ? "are" : "aren't")} the same client.");
 
-                string[] files = sourceClient.ListFiles(task.Source.Path, task.Filter);
+                ListResult[] files = sourceClient.ListFiles(task.Source.Path, task.Filter);
 
                 Logger.Info($"Treating {files.Length} files");
 
-                foreach (string file in files)
+                foreach (ListResult file in files)
                 {
-                    string destination = Path.Combine(task.Destination.Path, Path.GetFileName(file));
+                    string destination = Path.Combine(task.Destination.Path, Path.GetFileName(file.ToString()));
                     Logger.Debug($"Copying {file} to {task.Destination.Path}");
 
                     if (sameClient)

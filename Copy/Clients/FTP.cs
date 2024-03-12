@@ -48,12 +48,12 @@ namespace Copy.Clients
             FtpClient.AutoConnect();
         }
 
-        public bool DoFileExist(string path)
+        public bool DoFileExist(ListResult element)
         {
-            return FtpClient.FileExists(path);
+            return FtpClient.FileExists(element.ToString());
         }
 
-        public string[] ListFiles(string path, CopyFilter filter)
+        public ListResult[] ListFiles(string path, CopyFilter filter)
         {
             if (!FtpClient.DirectoryExists(path))
             {
@@ -67,89 +67,96 @@ namespace Copy.Clients
             FtpListItem[] files = FtpClient.GetListing(path)
                 .Where(f => nameRegex.IsMatch(f.Name) && authorRegex.IsMatch(f.RawOwner) && f.Created >= filter.CreatedAfter && (ulong)f.Size <= filter.MaxSize && (ulong)f.Size >= filter.MinSize)
                 .ToArray();
-            return files.Select(f => Path.Combine(path, f.Name)).ToArray();
+            return files.Select(f => new ListResult(path, f.Name)).ToArray();
         }
 
-        public Stream GetFile(string path)
+        public Stream GetFile(ListResult element)
         {
-            string directory = Path.GetDirectoryName(path) ?? throw new ArgumentNullException($"Impossible to get directory from {path}");
+            string elementPath = element.ToString();
+            string directory = Path.GetDirectoryName(elementPath) ?? throw new ArgumentNullException($"Impossible to get directory from {elementPath}");
             if (!FtpClient.DirectoryExists(directory))
             {
                 Logger.Error($"Directory {directory} does not exist");
                 throw new DirectoryNotFoundException($"Directory {directory} does not exist");
             }
-            if (!DoFileExist(path))
+            if (!DoFileExist(element))
             {
-                Logger.Error($"File {path} does not exist");
-                throw new FileNotFoundException($"File {path} does not exist");
+                Logger.Error($"File {elementPath} does not exist");
+                throw new FileNotFoundException($"File {elementPath} does not exist");
             }
 
             var stream = new MemoryStream();
-            FtpClient.DownloadStream(stream, path);
+            FtpClient.DownloadStream(stream, elementPath);
             stream.Position = 0;
             return stream;
         }
 
-        public void PutFile(string path, Stream stream)
+        public void PutFile(ListResult element, Stream stream)
         {
-            string directory = Path.GetDirectoryName(path) ?? throw new ArgumentNullException($"Impossible to get directory from {path}");
+            string elementPath = element.ToString();
+            string directory = Path.GetDirectoryName(elementPath) ?? throw new ArgumentNullException($"Impossible to get directory from {elementPath}");
             if (!FtpClient.DirectoryExists(directory))
             {
                 Logger.Warn($"Directory {directory} does not exist, creating");
                 FtpClient.CreateDirectory(directory);
             }
-            if (DoFileExist(path)) Logger.Warn($"File {path} already exists, overwriting");
+            if (DoFileExist(element)) Logger.Warn($"File {elementPath} already exists, overwriting");
 
-            FtpClient.UploadStream(stream, path, FtpRemoteExists.Overwrite);
+            FtpClient.UploadStream(stream, elementPath, FtpRemoteExists.Overwrite);
         }
 
-        public void MoveFile(string sourcePath, string destinationPath)
+        public void MoveElement(ListResult sourceElement, ListResult destinationElement)
         {
-            string directory = Path.GetDirectoryName(destinationPath) ?? throw new ArgumentNullException($"Impossible to get directory from {destinationPath}");
+            string sourceElementPath = sourceElement.ToString();
+            string destinationElementPath = destinationElement.ToString();
+            string directory = Path.GetDirectoryName(destinationElementPath) ?? throw new ArgumentNullException($"Impossible to get directory from {destinationElementPath}");
             if (!FtpClient.DirectoryExists(directory))
             {
                 Logger.Warn($"Directory {directory} does not exist, creating");
                 FtpClient.CreateDirectory(directory);
             }
-            if (!DoFileExist(sourcePath))
+            if (!DoFileExist(sourceElement))
             {
-                Logger.Error($"File {sourcePath} does not exist");
-                throw new FileNotFoundException($"File {sourcePath} does not exist");
+                Logger.Error($"File {sourceElementPath} does not exist");
+                throw new FileNotFoundException($"File {sourceElementPath} does not exist");
             }
-            if (DoFileExist(destinationPath)) Logger.Warn($"File {destinationPath} already exists, overwriting");
+            if (DoFileExist(destinationElement)) Logger.Warn($"File {destinationElementPath} already exists, overwriting");
 
-            FtpClient.MoveFile(sourcePath, destinationPath, FtpRemoteExists.Overwrite);
+            FtpClient.MoveFile(sourceElementPath, destinationElementPath, FtpRemoteExists.Overwrite);
         }
 
-        public void CopyFile(string sourcePath, string destinationPath)
+        public void CopyElement(ListResult sourceElement, ListResult destinationElement)
         {
-            string directory = Path.GetDirectoryName(destinationPath) ?? throw new ArgumentNullException($"Impossible to get directory from {destinationPath}");
+            string sourceElementPath = sourceElement.ToString();
+            string destinationElementPath = destinationElement.ToString();
+            string directory = Path.GetDirectoryName(destinationElementPath) ?? throw new ArgumentNullException($"Impossible to get directory from {destinationElementPath}");
             if (!FtpClient.DirectoryExists(directory))
             {
                 Logger.Warn($"Directory {directory} does not exist, creating");
                 FtpClient.CreateDirectory(directory);
             }
-            if (!DoFileExist(sourcePath))
+            if (!DoFileExist(sourceElement))
             {
-                Logger.Error($"File {sourcePath} does not exist");
-                throw new FileNotFoundException($"File {sourcePath} does not exist");
+                Logger.Error($"File {sourceElementPath} does not exist");
+                throw new FileNotFoundException($"File {sourceElementPath} does not exist");
             }
-            if (DoFileExist(destinationPath)) Logger.Warn($"File {destinationPath} already exists, overwriting");
+            if (DoFileExist(destinationElement)) Logger.Warn($"File {destinationElementPath} already exists, overwriting");
 
-            FtpClient.TransferFile(sourcePath, FtpClient, destinationPath, existsMode: FtpRemoteExists.Overwrite);
+            FtpClient.TransferFile(sourceElementPath, FtpClient, destinationElementPath, existsMode: FtpRemoteExists.Overwrite);
         }
 
-        public void DeleteFile(string path)
+        public void DeleteElement(ListResult element)
         {
-            string directory = Path.GetDirectoryName(path) ?? throw new ArgumentNullException($"Impossible to get directory from {path}");
+            string elementPath = element.ToString();
+            string directory = Path.GetDirectoryName(elementPath) ?? throw new ArgumentNullException($"Impossible to get directory from {elementPath}");
             if (!FtpClient.DirectoryExists(directory))
             {
                 Logger.Error($"Directory {directory} does not exist");
                 throw new DirectoryNotFoundException($"Directory {directory} does not exist");
             }
-            if (!DoFileExist(path)) Logger.Warn($"File {path} does not exist");
+            if (!DoFileExist(element)) Logger.Warn($"File {elementPath} does not exist");
 
-            FtpClient.DeleteFile(path);
+            FtpClient.DeleteFile(elementPath);
         }
 
         public void Dispose()
