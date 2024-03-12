@@ -8,20 +8,15 @@ namespace Copy.Types
     public class CopyTask
     {
         /// <summary>
-        /// Client to use for the task.
-        /// </summary>
-        [JsonProperty(PropertyName = "Client", Required = Required.Always)]
-        public required string Client { get; set; }
-        /// <summary>
         /// Source of files to copy.
         /// </summary>
         [JsonProperty(PropertyName = "Source", Required = Required.Always)]
-        public required string Source { get; set; }
+        public required CopyIO Source { get; set; }
         /// <summary>
         /// Destination of files to copy.
         /// </summary>
         [JsonProperty(PropertyName = "Destination", Required = Required.Always)]
-        public required string Destination { get; set; }
+        public required CopyIO Destination { get; set; }
         /// <summary>
         /// Whether to delete files after copying.
         /// </summary>

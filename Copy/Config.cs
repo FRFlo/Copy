@@ -101,16 +101,14 @@ namespace Copy
                 Tasks = [
                     new CopyTask()
                     {
-                        Client = "FTP",
-                        Source = "source",
-                        Destination = "destination",
+                        Source = new CopyIO("FTP", "source"),
+                        Destination =  new CopyIO("FTP", "destination"),
                         Delete = true
                     },
                     new CopyTask()
                     {
-                        Source = "source",
-                        Destination = "destination",
-                        Client = "SFTP",
+                        Source =  new CopyIO("SFTP", "source"),
+                        Destination =  new CopyIO("SFTP", "destination"),
                         Filter = new CopyFilter()
                         {
                             Name = ".*\\.txt"
@@ -118,9 +116,8 @@ namespace Copy
                     },
                     new CopyTask()
                     {
-                        Source = "source",
-                        Destination = "destination",
-                        Client = "Local",
+                        Source =  new CopyIO("Local", "source"),
+                        Destination = new CopyIO("Local", "destination"),
                         Delete = true,
                         Filter = new CopyFilter()
                         {
@@ -129,9 +126,8 @@ namespace Copy
                     },
                     new CopyTask()
                     {
-                        Source = "source",
-                        Destination = "destination",
-                        Client = "Exchange"
+                        Source = new CopyIO("Exchange", "source"),
+                        Destination = new CopyIO("Exchange", "destination"),
                     }
                 ]
             }, Formatting.Indented);
