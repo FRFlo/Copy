@@ -17,6 +17,13 @@
         /// </summary>
         public string ElementName { get; set; } = elementName;
 
+        public static ListResult FromPath(string path)
+        {
+            return new ListResult(
+                Path.GetDirectoryName(path) ?? throw new ArgumentNullException($"Impossible to get directory from {path}"),
+                Path.GetFileName(path) ?? throw new ArgumentNullException($"Impossible to get file name from {path}")
+                );
+        }
         public override string ToString()
         {
             return Path.Combine(Location, ElementName);
