@@ -84,6 +84,42 @@ namespace Copy.Clients
             stream.CopyTo(fileStream);
         }
 
+        public void MoveFile(string sourcePath, string destinationPath)
+        {
+            string directory = Path.GetDirectoryName(destinationPath) ?? throw new ArgumentNullException($"Impossible to get directory from {destinationPath}");
+            if (!Directory.Exists(directory))
+            {
+                Logger.Warn($"Directory {directory} does not exist, creating");
+                Directory.CreateDirectory(directory);
+            }
+            if (!DoFileExist(sourcePath))
+            {
+                Logger.Error($"File {sourcePath} does not exist");
+                throw new FileNotFoundException($"File {sourcePath} does not exist");
+            }
+            if (DoFileExist(destinationPath)) Logger.Warn($"File {destinationPath} already exists, overwriting");
+
+            File.Move(sourcePath, destinationPath);
+        }
+
+        public void CopyFile(string sourcePath, string destinationPath)
+        {
+            string directory = Path.GetDirectoryName(destinationPath) ?? throw new ArgumentNullException($"Impossible to get directory from {destinationPath}");
+            if (!Directory.Exists(directory))
+            {
+                Logger.Warn($"Directory {directory} does not exist, creating");
+                Directory.CreateDirectory(directory);
+            }
+            if (!DoFileExist(sourcePath))
+            {
+                Logger.Error($"File {sourcePath} does not exist");
+                throw new FileNotFoundException($"File {sourcePath} does not exist");
+            }
+            if (DoFileExist(destinationPath)) Logger.Warn($"File {destinationPath} already exists, overwriting");
+
+            File.Copy(sourcePath, destinationPath, true);
+        }
+
         public void DeleteFile(string path)
         {
             string directory = Path.GetDirectoryName(path) ?? throw new ArgumentNullException($"Impossible to get directory from {path}");

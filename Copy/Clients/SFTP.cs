@@ -80,6 +80,42 @@ namespace Copy.Clients
             SftpClient.UploadFile(stream, path, true);
         }
 
+        public void MoveFile(string sourcePath, string destinationPath)
+        {
+            string directory = Path.GetDirectoryName(destinationPath) ?? throw new ArgumentNullException($"Impossible to get directory from {destinationPath}");
+            if (!SftpClient.Exists(directory))
+            {
+                Logger.Warn($"Directory {directory} does not exist, creating");
+                SftpClient.CreateDirectory(directory);
+            }
+            if (!DoFileExist(sourcePath))
+            {
+                Logger.Error($"File {sourcePath} does not exist");
+                throw new FileNotFoundException($"File {sourcePath} does not exist");
+            }
+            if (DoFileExist(destinationPath)) Logger.Warn($"File {destinationPath} already exists, overwriting");
+
+            SftpClient.RenameFile(sourcePath, destinationPath);
+        }
+
+        public void CopyFile(string sourcePath, string destinationPath)
+        {
+            string directory = Path.GetDirectoryName(destinationPath) ?? throw new ArgumentNullException($"Impossible to get directory from {destinationPath}");
+            if (!SftpClient.Exists(directory))
+            {
+                Logger.Warn($"Directory {directory} does not exist, creating");
+                SftpClient.CreateDirectory(directory);
+            }
+            if (!DoFileExist(sourcePath))
+            {
+                Logger.Error($"File {sourcePath} does not exist");
+                throw new FileNotFoundException($"File {sourcePath} does not exist");
+            }
+            if (DoFileExist(destinationPath)) Logger.Warn($"File {destinationPath} already exists, overwriting");
+
+            SftpClient.SynchronizeDirectories(Path.GetDirectoryName(sourcePath), directory, Path.GetFileName(sourcePath));
+        }
+
         public void DeleteFile(string path)
         {
             string directory = Path.GetDirectoryName(path) ?? throw new ArgumentNullException($"Impossible to get directory from {path}");
