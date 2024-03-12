@@ -19,7 +19,7 @@ namespace Copy.Clients
         /// </summary>
         private readonly FtpClient FtpClient;
 
-        public Client Credentials => _credentials;
+        public Client config => _credentials;
 
         /// <summary>
         /// Constructor.

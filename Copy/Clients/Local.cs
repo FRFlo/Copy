@@ -15,7 +15,7 @@ namespace Copy.Clients
         /// </summary>
         private readonly Client _credentials;
 
-        public Client Credentials => _credentials;
+        public Client config => _credentials;
 
         /// <summary>
         /// Constructor.
