@@ -88,6 +88,42 @@ namespace Copy.Clients
             FtpClient.UploadStream(stream, path, FtpRemoteExists.Overwrite);
         }
 
+        public void MoveFile(string sourcePath, string destinationPath)
+        {
+            string directory = Path.GetDirectoryName(destinationPath) ?? throw new ArgumentNullException($"Impossible to get directory from {destinationPath}");
+            if (!FtpClient.DirectoryExists(directory))
+            {
+                Logger.Warn($"Directory {directory} does not exist, creating");
+                FtpClient.CreateDirectory(directory);
+            }
+            if (!DoFileExist(sourcePath))
+            {
+                Logger.Error($"File {sourcePath} does not exist");
+                throw new FileNotFoundException($"File {sourcePath} does not exist");
+            }
+            if (DoFileExist(destinationPath)) Logger.Warn($"File {destinationPath} already exists, overwriting");
+
+            FtpClient.MoveFile(sourcePath, destinationPath, FtpRemoteExists.Overwrite);
+        }
+
+        public void CopyFile(string sourcePath, string destinationPath)
+        {
+            string directory = Path.GetDirectoryName(destinationPath) ?? throw new ArgumentNullException($"Impossible to get directory from {destinationPath}");
+            if (!FtpClient.DirectoryExists(directory))
+            {
+                Logger.Warn($"Directory {directory} does not exist, creating");
+                FtpClient.CreateDirectory(directory);
+            }
+            if (!DoFileExist(sourcePath))
+            {
+                Logger.Error($"File {sourcePath} does not exist");
+                throw new FileNotFoundException($"File {sourcePath} does not exist");
+            }
+            if (DoFileExist(destinationPath)) Logger.Warn($"File {destinationPath} already exists, overwriting");
+
+            FtpClient.TransferFile(sourcePath, FtpClient, destinationPath, existsMode: FtpRemoteExists.Overwrite);
+        }
+
         public void DeleteFile(string path)
         {
             string directory = Path.GetDirectoryName(path) ?? throw new ArgumentNullException($"Impossible to get directory from {path}");

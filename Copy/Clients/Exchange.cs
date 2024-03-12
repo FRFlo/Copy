@@ -50,6 +50,16 @@ namespace Copy.Clients
             throw new NotImplementedException();
         }
 
+        public void MoveFile(string sourcePath, string destinationPath)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void CopyFile(string sourcePath, string destinationPath)
+        {
+            throw new NotImplementedException();
+        }
+
         public void DeleteFile(string path)
         {
             throw new NotImplementedException();
