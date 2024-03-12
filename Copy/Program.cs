@@ -76,7 +76,7 @@ namespace Copy
 
                 foreach (ListResult file in files)
                 {
-                    string destination = Path.Combine(task.Destination.Path, Path.GetFileName(file.ToString()));
+                    ListResult destination = new(task.Destination.Path, file.ElementName);
                     Logger.Debug($"Copying {file} to {task.Destination.Path}");
 
                     if (sameClient)
@@ -84,12 +84,12 @@ namespace Copy
                         if (task.Delete)
                         {
                             Logger.Debug($"Moving {file} to {destination}");
-                            sourceClient.MoveFile(file, destination);
+                            sourceClient.MoveElement(file, destination);
                         }
                         else
                         {
                             Logger.Debug($"Copying {file} to {destination}");
-                            sourceClient.CopyFile(file, destination);
+                            sourceClient.CopyElement(file, destination);
                         }
                     }
                     else
@@ -101,7 +101,7 @@ namespace Copy
                         if (task.Delete)
                         {
                             Logger.Debug($"Deleting {file}");
-                            sourceClient.DeleteFile(file);
+                            sourceClient.DeleteElement(file);
                         }
 
                         content.Close();
