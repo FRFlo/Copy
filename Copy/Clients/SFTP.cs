@@ -20,7 +20,15 @@ namespace Copy.Clients
         public SFTP(Client credentials)
         {
             _credentials = credentials;
-            SftpClient = new SftpClient(credentials.Host, credentials.Port, credentials.Username, credentials.Password);
+            if (credentials.Fingerprint != null)
+            {
+                PrivateKeyFile privateKey = new(credentials.PrivateKey);
+                SftpClient = new SftpClient(credentials.Host, credentials.Port, credentials.Username, privateKey);
+            }
+            else
+            {
+                SftpClient = new SftpClient(credentials.Host, credentials.Port, credentials.Username, credentials.Password);
+            }
             SftpClient.HostKeyReceived += (client, args) =>
             {
                 if (credentials.Fingerprint == null)
