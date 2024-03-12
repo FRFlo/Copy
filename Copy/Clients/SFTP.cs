@@ -21,6 +21,21 @@ namespace Copy.Clients
         {
             _credentials = credentials;
             SftpClient = new SftpClient(credentials.Host, credentials.Port, credentials.Username, credentials.Password);
+            SftpClient.HostKeyReceived += (client, args) =>
+            {
+                if (credentials.Fingerprint == null)
+                {
+                    args.CanTrust = true;
+                }
+                else if (args.FingerPrintMD5 == credentials.Fingerprint)
+                {
+                    args.CanTrust = true;
+                }
+                else
+                {
+                    args.CanTrust = false;
+                }
+            };
             SftpClient.Connect();
         }
 
