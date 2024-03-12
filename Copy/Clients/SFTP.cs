@@ -22,7 +22,7 @@ namespace Copy.Clients
             _credentials = credentials;
             if (credentials.Fingerprint != null)
             {
-                PrivateKeyFile privateKey = new(credentials.PrivateKey);
+                using PrivateKeyFile privateKey = new(credentials.PrivateKey);
                 SftpClient = new SftpClient(credentials.Host, credentials.Port, credentials.Username, privateKey);
             }
             else
