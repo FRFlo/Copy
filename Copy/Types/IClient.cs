@@ -6,9 +6,9 @@
     internal interface IClient : IDisposable
     {
         /// <summary>
-        /// Client credentials.
+        /// Client configuration.
         /// </summary>
-        Client Credentials { get; }
+        Client Config { get; }
         /// <summary>
         /// List files in a directory.
         /// </summary>

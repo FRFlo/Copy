@@ -14,7 +14,7 @@ namespace Copy.Clients
         /// </summary>
         private readonly ExchangeService ExchangeService;
 
-        public Client Credentials => _credentials;
+        public Client Config => _credentials;
 
         /// <summary>
         /// Constructor.
@@ -23,11 +23,23 @@ namespace Copy.Clients
         public Exchange(Client credentials)
         {
             _credentials = credentials;
-            ExchangeService = new ExchangeService()
+
+            if (credentials.Autodiscover)
             {
-                Credentials = new WebCredentials(credentials.Username, credentials.Password),
-                Url = new Uri(credentials.Host)
-            };
+                ExchangeService = new ExchangeService()
+                {
+                    Credentials = new WebCredentials(credentials.Username, credentials.Password)
+                };
+                ExchangeService.AutodiscoverUrl(credentials.Username);
+            }
+            else
+            {
+                ExchangeService = new ExchangeService()
+                {
+                    Credentials = new WebCredentials(credentials.Username, credentials.Password),
+                    Url = new Uri(credentials.Host)
+                };
+            }
         }
 
         public bool DoFileExist(string path)

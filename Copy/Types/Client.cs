@@ -63,5 +63,20 @@ namespace Copy.Types
         /// </summary>
         [JsonProperty(PropertyName = "Password", Required = Required.Default)]
         public string? Password { get; set; }
+        /// <summary>
+        /// Private key of the client.
+        /// </summary>
+        [JsonProperty(PropertyName = "PrivateKey", Required = Required.Default)]
+        public string? PrivateKey { get; set; } = null;
+        /// <summary>
+        /// Fingerprint of the server.
+        /// </summary>
+        [JsonProperty(PropertyName = "Fingerprint", Required = Required.Default)]
+        public string? Fingerprint { get; set; } = null;
+        /// <summary>
+        /// Exchange autodiscover server.
+        /// </summary>
+        [JsonProperty(PropertyName = "Autodiscover", Required = Required.Default)]
+        public bool Autodiscover { get; set; } = false;
     }
 }

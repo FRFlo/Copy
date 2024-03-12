@@ -15,12 +15,35 @@ namespace Copy.Clients
         /// </summary>
         private readonly SftpClient SftpClient;
 
-        public Client Credentials => _credentials;
+        public Client Config => _credentials;
 
         public SFTP(Client credentials)
         {
             _credentials = credentials;
-            SftpClient = new SftpClient(credentials.Host, credentials.Port, credentials.Username, credentials.Password);
+            if (credentials.Fingerprint != null)
+            {
+                using PrivateKeyFile privateKey = new(credentials.PrivateKey);
+                SftpClient = new SftpClient(credentials.Host, credentials.Port, credentials.Username, privateKey);
+            }
+            else
+            {
+                SftpClient = new SftpClient(credentials.Host, credentials.Port, credentials.Username, credentials.Password);
+            }
+            SftpClient.HostKeyReceived += (client, args) =>
+            {
+                if (credentials.Fingerprint == null)
+                {
+                    args.CanTrust = true;
+                }
+                else if (args.FingerPrintMD5 == credentials.Fingerprint)
+                {
+                    args.CanTrust = true;
+                }
+                else
+                {
+                    args.CanTrust = false;
+                }
+            };
             SftpClient.Connect();
         }
 
