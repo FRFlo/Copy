@@ -1,4 +1,4 @@
-namespace Copy.Types
+﻿namespace Copy.Types
 {
     /// <summary>
     /// Interface for a client used to copy, delete, and list files.
@@ -34,6 +34,18 @@ namespace Copy.Types
         /// <param name="path">Path to the file.</param>
         /// <param name="stream">Stream of the file.</param>
         void PutFile(string path, Stream stream);
+        /// <summary>
+        /// Move a file.
+        /// </summary>
+        /// <param name="sourcePath">Path to the source file.</param>
+        /// <param name="destinationPath">Path to the destination file.</param>
+        void MoveFile(string sourcePath, string destinationPath);
+        /// <summary>
+        /// Copy a file.
+        /// </summary>
+        /// <param name="sourcePath">Path to the source file.</param>
+        /// <param name="destinationPath">Path to the destination file.</param>
+        void CopyFile(string sourcePath, string destinationPath);
         /// <summary>
         /// Delete a file.
         /// </summary>
