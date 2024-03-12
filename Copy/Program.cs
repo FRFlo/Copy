@@ -55,36 +55,60 @@ namespace Copy
 
             foreach (CopyTask task in Config.Tasks)
             {
-                Logger.Info($"Copying files from {task.Source} to {task.Destination} using {task.Client}");
-                if (!Clients.TryGetValue(task.Client, out IClient? client))
+                Logger.Info($"Copying files from {task.Source.Path} ({task.Source.Client}) to {task.Destination.Path} ({task.Destination.Client})");
+                if (!Clients.TryGetValue(task.Source.Client, out IClient? sourceClient))
                 {
-                    Logger.Error($"Client {task.Source} not found");
-                    throw new ClientNotFoundException($"Client {task.Source} not found");
+                    Logger.Error($"Source client {task.Source.Client} not found");
+                    throw new ClientNotFoundException($"Source client {task.Source.Client} not found");
+                }
+                if (!Clients.TryGetValue(task.Destination.Client, out IClient? destinationClient))
+                {
+                    Logger.Error($"Destination client {task.Destination.Client} not found");
+                    throw new ClientNotFoundException($"Destination client {task.Destination.Client} not found");
                 }
 
-                string[] files = client.ListFiles(task.Source, task.Filter);
+                bool sameClient = task.Source.Client == task.Destination.Client;
+                Logger.Debug($"Source and destination {(sameClient ? "are" : "aren't")} the same client.");
+
+                string[] files = sourceClient.ListFiles(task.Source.Path, task.Filter);
 
                 Logger.Info($"Treating {files.Length} files");
 
                 foreach (string file in files)
                 {
-                    string destination = Path.Combine(task.Destination, Path.GetFileName(file));
-                    Logger.Debug($"Copying {file} to {task.Destination}");
-                    Stream content = client.GetFile(file);
-                    client.PutFile(destination, content);
+                    string destination = Path.Combine(task.Destination.Path, Path.GetFileName(file));
+                    Logger.Debug($"Copying {file} to {task.Destination.Path}");
 
-                    if (task.Delete)
+                    if (sameClient)
                     {
-                        Logger.Debug($"Deleting {file}");
-                        client.DeleteFile(file);
+                        if (task.Delete)
+                        {
+                            Logger.Debug($"Moving {file} to {destination}");
+                            sourceClient.MoveFile(file, destination);
+                        }
+                        else
+                        {
+                            Logger.Debug($"Copying {file} to {destination}");
+                            sourceClient.CopyFile(file, destination);
+                        }
                     }
+                    else
+                    {
+                        Stream content = sourceClient.GetFile(file);
+                        Logger.Debug($"Putting {file} ({task.Source.Client}) to {task.Destination.Path} ({destination})");
+                        destinationClient.PutFile(destination, content);
 
-                    content.Close();
+                        if (task.Delete)
+                        {
+                            Logger.Debug($"Deleting {file}");
+                            sourceClient.DeleteFile(file);
+                        }
 
-                    Logger.Debug($"Copied {file} to {task.Destination}");
+                        content.Close();
+                    }
                 }
 
-                Logger.Info($"Copied {files.Length} files from {task.Source} to {task.Destination} using {task.Client}");
+                Logger.Info("All files treated");
             }
 
             Logger.Info("All tasks executed");
