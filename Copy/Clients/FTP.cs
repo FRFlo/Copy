@@ -30,6 +30,21 @@ namespace Copy.Clients
             _credentials = credentials;
             FtpClient = new FtpClient(credentials.Host, new NetworkCredential(credentials.Username, credentials.Password), credentials.Port);
             FtpClient.Config.EncryptionMode = FtpEncryptionMode.Auto;
+            FtpClient.ValidateCertificate += (client, args) =>
+            {
+                if (credentials.Fingerprint == null)
+                {
+                    args.Accept = true;
+                }
+                else if (args.Certificate.GetCertHashString() == credentials.Fingerprint)
+                {
+                    args.Accept = true;
+                }
+                else
+                {
+                    args.Accept = false;
+                }
+            };
             FtpClient.AutoConnect();
         }
 
