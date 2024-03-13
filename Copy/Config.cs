@@ -135,7 +135,11 @@ namespace Copy
                         Destination = new CopyIO("Exchange", "destination"),
                     }
                 ]
-            }, Formatting.Indented);
+            }, new JsonSerializerSettings()
+            {
+                Formatting = Formatting.Indented,
+                NullValueHandling = NullValueHandling.Ignore
+            });
         }
     }
 }
