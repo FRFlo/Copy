@@ -42,6 +42,11 @@ namespace Copy
         /// <returns>Configuration.</returns>
         public static Config Load(string path)
         {
+            if (!File.Exists(path))
+            {
+                Logger.Error("The configuration file does not exist.");
+                throw new FileNotFoundException("The configuration file does not exist.");
+            }
             using FileStream stream = new(path, FileMode.Open);
             using StreamReader reader = new(stream);
             string json = reader.ReadToEnd();
