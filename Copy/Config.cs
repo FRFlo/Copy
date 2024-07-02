@@ -111,7 +111,8 @@ namespace Copy
                         Destination =  new CopyIO("SFTP", "destination"),
                         Filter = new CopyFilter()
                         {
-                            Name = ".*\\.txt"
+                            Name = ".*\\.txt",
+                            Author = "root"
                         }
                     },
                     new CopyTask()
@@ -121,7 +122,9 @@ namespace Copy
                         Delete = true,
                         Filter = new CopyFilter()
                         {
-                            Name = ".*\\.txt"
+                            CreatedAfter = DateTime.Now.AddDays(-1),
+                            MinSize = 512,
+                            MaxSize = 4096
                         }
                     },
                     new CopyTask()
