@@ -27,5 +27,18 @@ namespace Copy.Types
         /// </summary>
         [JsonProperty(PropertyName = "Filter", Required = Required.DisallowNull)]
         public CopyFilter Filter { get; set; } = new();
+
+        /// <summary>
+        /// Whether to zip the files when copying.
+        /// </summary>
+        [JsonProperty(PropertyName = "Zip", Required = Required.DisallowNull)]
+        public bool Zip { get; set; } = false;
+
+        /// <summary>
+        /// Custom name for the zip file. If not specified and Zip is true, 
+        /// a default name based on the timestamp will be used.
+        /// </summary>
+        [JsonProperty(PropertyName = "ZipFileName")]
+        public string? ZipFileName { get; set; }
     }
 }

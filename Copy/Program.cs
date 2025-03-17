@@ -1,5 +1,6 @@
 ﻿using Copy.Clients;
 using Copy.Types;
+using System.IO.Compression;
 
 namespace Copy
 {
@@ -71,40 +72,76 @@ namespace Copy
                 Logger.Debug($"Source and destination {(sameClient ? "are" : "aren't")} the same client.");
 
                 string[] files = sourceClient.ListFiles(task.Source.Path, task.Filter);
-
                 Logger.Info($"Treating {files.Length} files");
 
-                foreach (string file in files)
+                if (task.Zip)
                 {
-                    string destination = Path.Combine(task.Destination.Path, Path.GetFileName(file));
-                    Logger.Debug($"Copying {file} to {task.Destination.Path}");
+                    // Generate zip filename
+                    string zipFileName = task.ZipFileName ?? $"archive_{DateTime.Now:yyyyMMdd_HHmmss}.zip";
+                    string zipPath = Path.Combine(task.Destination.Path, zipFileName);
+                    Logger.Info($"Creating zip archive: {zipPath}");
 
-                    if (sameClient)
+                    using (var memoryStream = new MemoryStream())
                     {
-                        if (task.Delete)
+                        using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
                         {
-                            Logger.Debug($"Moving {file} to {destination}");
-                            sourceClient.MoveFile(file, destination);
+                            foreach (string file in files)
+                            {
+                                using (Stream sourceStream = sourceClient.GetFile(file))
+                                {
+                                    var zipEntry = archive.CreateEntry(Path.GetFileName(file));
+                                    using (var zipStream = zipEntry.Open())
+                                    {
+                                        sourceStream.CopyTo(zipStream);
+                                    }
+                                }
+
+                                if (task.Delete)
+                                {
+                                    Logger.Debug($"Deleting {file}");
+                                    sourceClient.DeleteFile(file);
+                                }
+                            }
+                        }
+
+                        memoryStream.Position = 0;
+                        destinationClient.PutFile(zipPath, memoryStream);
+                    }
+                }
+                else
+                {
+                    foreach (string file in files)
+                    {
+                        string destination = Path.Combine(task.Destination.Path, Path.GetFileName(file));
+                        Logger.Debug($"Copying {file} to {task.Destination.Path}");
+
+                        if (sameClient)
+                        {
+                            if (task.Delete)
+                            {
+                                Logger.Debug($"Moving {file} to {destination}");
+                                sourceClient.MoveFile(file, destination);
+                            }
+                            else
+                            {
+                                Logger.Debug($"Copying {file} to {destination}");
+                                sourceClient.CopyFile(file, destination);
+                            }
                         }
                         else
                         {
-                            Logger.Debug($"Copying {file} to {destination}");
-                            sourceClient.CopyFile(file, destination);
-                        }
-                    }
-                    else
-                    {
-                        Stream content = sourceClient.GetFile(file);
-                        Logger.Debug($"Putting {file} ({task.Source.Client}) to {task.Destination.Path} ({destination})");
-                        destinationClient.PutFile(destination, content);
+                            Stream content = sourceClient.GetFile(file);
+                            Logger.Debug($"Putting {file} ({task.Source.Client}) to {task.Destination.Path} ({destination})");
+                            destinationClient.PutFile(destination, content);
 
-                        if (task.Delete)
-                        {
-                            Logger.Debug($"Deleting {file}");
-                            sourceClient.DeleteFile(file);
-                        }
+                            if (task.Delete)
+                            {
+                                Logger.Debug($"Deleting {file}");
+                                sourceClient.DeleteFile(file);
+                            }
 
-                        content.Close();
+                            content.Close();
+                        }
                     }
                 }
 
