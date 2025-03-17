@@ -1,7 +1,49 @@
 ﻿using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace Copy
 {
+    internal static class LoggerService
+    {
+        private static ILoggerFactory? _loggerFactory;
+        private static ILogger? _logger;
+        private static bool _debug;
+
+        public static void Initialize(bool debug = false)
+        {
+            _debug = debug;
+            _loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder
+                    .SetMinimumLevel(debug ? LogLevel.Debug : LogLevel.Information)
+                    .AddConsole();
+            });
+
+            _logger = _loggerFactory.CreateLogger("Copy");
+        }
+
+        public static void Debug(string message) => 
+            _logger?.LogDebug(message);
+
+        public static void Info(string message) => 
+            _logger?.LogInformation(message);
+
+        public static void Warning(string message) => 
+            _logger?.LogWarning(message);
+
+        public static void Error(string message) => 
+            _logger?.LogError(message);
+
+        public static bool IsDebugEnabled() => _debug;
+
+        public static void Dispose()
+        {
+            _loggerFactory?.Dispose();
+            _loggerFactory = null;
+            _logger = null;
+        }
+    }
+
     /// <summary>
     /// Logger class.
     /// </summary>
@@ -40,7 +82,7 @@ namespace Copy
                 message = message[..^1];
             }
 
-            if (prefix != "DEBUG" || Program.Config.Debug)
+            if (prefix != "DEBUG" || LoggerService.IsDebugEnabled())
             {
                 foreach (string line in message.Split('\n'))
                 {
