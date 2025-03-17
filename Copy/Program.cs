@@ -74,7 +74,7 @@ namespace Copy
                 string[] files = sourceClient.ListFiles(task.Source.Path, task.Filter);
                 Logger.Info($"Treating {files.Length} files");
 
-                if (task.Zip)
+                if (task.Zip && files.Length > 0)
                 {
                     // Generate zip filename
                     string zipFileName = task.ZipFileName ?? $"archive_{DateTime.Now:yyyyMMdd_HHmmss}.zip";
