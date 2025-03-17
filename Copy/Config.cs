@@ -12,17 +12,21 @@ namespace Copy
         /// <summary>
         /// Path to the configuration file.
         /// </summary>
-        public static string ConfigPath = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
+        public static string ConfigPath = Environment.GetEnvironmentVariable("CONFIG_PATH") ?? 
+            Path.Combine(Directory.GetCurrentDirectory(), "config.json");
+
         /// <summary>
         /// Path to the scheme file.
         /// </summary>
-        public static string SchemePath = Path.Combine(Directory.GetCurrentDirectory(), "scheme.json");
+        public static string SchemePath = Environment.GetEnvironmentVariable("SCHEME_PATH") ?? 
+            Path.Combine(Directory.GetCurrentDirectory(), "scheme.json");
 
         /// <summary>
         /// Indicates if the program is in debug mode.
         /// </summary>
         [JsonProperty("Debug", Required = Required.DisallowNull)]
-        public bool Debug { get; set; } = false;
+        public bool Debug { get; set; } = Environment.GetEnvironmentVariable("DEBUG")?.ToLower() == "true";
+
         /// <summary>
         /// List of clients.
         /// </summary>
