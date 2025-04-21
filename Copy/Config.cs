@@ -1,4 +1,4 @@
-﻿using Copy.Types;
+using Copy.Types;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Schema.Generation;
 
@@ -9,7 +9,6 @@ namespace Copy
     /// </summary>
     internal class Config
     {
-        /// <summary>
         /// Path to the configuration file.
         /// </summary>
         public static string ConfigPath = Environment.GetEnvironmentVariable("CONFIG_PATH") ?? 
@@ -31,7 +30,7 @@ namespace Copy
         /// List of clients.
         /// </summary>
         [JsonProperty(nameof(Clients), Required = Required.AllowNull)]
-        public List<Client> Clients = [];
+        public List<Client> Clients { get; set; } = [];
 
         /// <summary>
         /// List of tasks.
@@ -42,9 +41,9 @@ namespace Copy
         /// <summary>
         /// Load the configuration from the file and environment variables
         /// </summary>
-        /// <param name="path">Path to the configuration file</param>
-        /// <returns>Configuration</returns>
-        public static Config Load(string path)
+        /// <param name="path">Path to the configuration file.</param>
+        /// <returns>Configuration.</returns>
+        public static Config FromFile(string path)
         {
             using FileStream stream = new(path, FileMode.Open);
             using StreamReader reader = new(stream);
@@ -85,21 +84,21 @@ namespace Copy
         /// Obtain the JSON scheme of the configuration.
         /// </summary>
         /// <returns>JSON scheme of the configuration.</returns>
-        public static string GetScheme()
+        public static string GenerateSchema()
         {
             return new JSchemaGenerator().Generate(typeof(Config)).ToString();
         }
-        /// <summary>
-        /// Obtain the default configuration.
-        /// </summary>
-        /// <returns>Default configuration.</returns>
-        public static string GetDefault()
-        {
-            return JsonConvert.SerializeObject(new Config()
-            {
 
+        /// <summary>
+        /// Create a default configuration.
+        /// </summary>
+        /// <returns>Default configuration instance.</returns>
+        public static Config CreateDefault()
+        {
+            return new Config
+            {
                 Clients = [
-                    new Client()
+                    new Client
                     {
                         Type = ClientType.FTP,
                         Name = "FTP",
@@ -108,7 +107,7 @@ namespace Copy
                         Username = "user",
                         Password = "password"
                     },
-                    new Client()
+                    new Client
                     {
                         Type = ClientType.SFTP,
                         Name = "SFTP",
@@ -117,13 +116,13 @@ namespace Copy
                         Username = "user",
                         Password = "password"
                     },
-                    new Client()
+                    new Client
                     {
                         Type = ClientType.Local,
                         Name = "Local",
                         Host = "localhost",
                     },
-                    new Client()
+                    new Client
                     {
                         Type = ClientType.Exchange,
                         Name = "Exchange",
@@ -133,41 +132,14 @@ namespace Copy
                     }
                 ],
                 Tasks = [
-                    new CopyTask()
+                    new CopyTask
                     {
                         Source = new CopyIO("FTP", "source"),
-                        Destination =  new CopyIO("FTP", "destination"),
+                        Destination = new CopyIO("FTP", "destination"),
                         Delete = true
-                    },
-                    new CopyTask()
-                    {
-                        Source =  new CopyIO("SFTP", "source"),
-                        Destination =  new CopyIO("SFTP", "destination"),
-                        Filter = new CopyFilter()
-                        {
-                            Name = ".*\\.txt",
-                            Author = "root"
-                        }
-                    },
-                    new CopyTask()
-                    {
-                        Source =  new CopyIO("Local", "source"),
-                        Destination = new CopyIO("Local", "destination"),
-                        Delete = true,
-                        Filter = new CopyFilter()
-                        {
-                            CreatedAfter = DateTime.Now.AddDays(-1),
-                            MinSize = 512,
-                            MaxSize = 4096
-                        }
-                    },
-                    new CopyTask()
-                    {
-                        Source = new CopyIO("Exchange", "source"),
-                        Destination = new CopyIO("Exchange", "destination"),
                     }
                 ]
-            }, Formatting.Indented);
+            };
         }
 
         /// <summary>
