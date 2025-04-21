@@ -1,4 +1,5 @@
 ﻿using Copy.Types;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
@@ -31,7 +32,93 @@ namespace Copy.Clients
             return File.Exists(path);
         }
 
-        [SupportedOSPlatform("windows")]
+        #region Native Methods
+        [StructLayout(LayoutKind.Sequential)]
+        private struct Passwd
+        {
+            public IntPtr pw_name;   // Username
+            public IntPtr pw_passwd; // Password
+            public uint pw_uid;     // User ID
+            public uint pw_gid;     // Group ID
+            public IntPtr pw_gecos;  // User Info
+            public IntPtr pw_dir;    // Home Directory
+            public IntPtr pw_shell;  // Shell
+        }
+
+        [DllImport("libc", SetLastError = true)]
+        private static extern IntPtr getpwuid(uint uid);
+
+        [DllImport("libc", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern int stat(string path, out Stat buf);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct Stat
+        {
+            public uint st_dev;
+            public uint st_ino;
+            public uint st_mode;
+            public uint st_nlink;
+            public uint st_uid;
+            public uint st_gid;
+            public uint st_rdev;
+            public long st_size;
+            public long st_atime;
+            public long st_mtime;
+            public long st_ctime;
+            public uint st_blksize;
+            public uint st_blocks;
+        }
+        #endregion
+
+        private static string GetUnixFileOwner(string filePath)
+        {
+            try
+            {
+                if (stat(filePath, out Stat statBuf) != 0)
+                {
+                    throw new FileOwnerNotFoundException($"Impossible to get owner of {filePath}");
+                }
+
+                IntPtr passwd = getpwuid(statBuf.st_uid);
+                if (passwd == IntPtr.Zero)
+                {
+                    return statBuf.st_uid.ToString();
+                }
+
+                var pwStruct = Marshal.PtrToStructure<Passwd>(passwd);
+                return Marshal.PtrToStringAnsi(pwStruct.pw_name) ?? statBuf.st_uid.ToString();
+            }
+            catch (DllNotFoundException)
+            {
+                return Environment.UserName;
+            }
+        }
+
+        private static string GetFileOwner(string filePath)
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                try
+                {
+                    var fileInfo = new FileInfo(filePath);
+                    return fileInfo.GetAccessControl().GetOwner(typeof(NTAccount))?.Value 
+                        ?? throw new FileOwnerNotFoundException($"Impossible to get owner of {filePath}");
+                }
+                catch (PlatformNotSupportedException)
+                {
+                    return Environment.UserName;
+                }
+            }
+            else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            {
+                return GetUnixFileOwner(filePath);
+            }
+            else
+            {
+                return Environment.UserName;
+            }
+        }
+
         public string[] ListFiles(string path, CopyFilter filter)
         {
             if (!Directory.Exists(path))
@@ -43,14 +130,17 @@ namespace Copy.Clients
             Regex nameRegex = new(filter.Name);
             Regex authorRegex = new(filter.Author);
 
-            return Directory.GetFiles(path)
+            return [.. Directory.GetFiles(path)
                 .Where(f =>
                 {
                     FileInfo fileInfo = new(f);
-                    bool authorMatch = authorRegex.IsMatch(fileInfo.GetAccessControl().GetOwner(typeof(NTAccount))?.Value ?? throw new FileOwnerNotFoundException($"Impossible to get owner of {f}"));
-                    return nameRegex.IsMatch(Path.GetFileName(f)) && authorMatch && File.GetCreationTime(f) >= filter.CreatedAfter && (ulong)fileInfo.Length <= filter.MaxSize && (ulong)fileInfo.Length >= filter.MinSize;
-                })
-                .ToArray();
+                    bool authorMatch = authorRegex.IsMatch(GetFileOwner(f));
+                    return nameRegex.IsMatch(Path.GetFileName(f)) && 
+                           authorMatch && 
+                           File.GetCreationTime(f) >= filter.CreatedAfter && 
+                           (ulong)fileInfo.Length <= filter.MaxSize && 
+                           (ulong)fileInfo.Length >= filter.MinSize;
+                })];
         }
 
         public Stream GetFile(string path)

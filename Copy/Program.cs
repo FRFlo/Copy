@@ -1,4 +1,4 @@
-﻿using Copy.Types;
+using Copy.Types;
 using Newtonsoft.Json;
 
 namespace Copy
