@@ -215,6 +215,18 @@ namespace Copy
                 {
                     throw new InvalidDataException($"Le client destination {task.Destination.Client} n'existe pas");
                 }
+                if (task.MoveOriginalTo != null && string.IsNullOrEmpty(task.MoveOriginalTo.Client))
+                {
+                    throw new InvalidDataException("Le client MoveOriginalTo ne peut pas être vide");
+                }
+                if (task.MoveOriginalTo != null && !clientNames.Contains(task.MoveOriginalTo.Client))
+                {
+                    throw new InvalidDataException($"Le client MoveOriginalTo {task.MoveOriginalTo.Client} n'existe pas");
+                }
+                if (task.Delete && task.MoveOriginalTo != null)
+                {
+                    throw new InvalidDataException("Une tâche ne peut pas utiliser Delete et MoveOriginalTo en même temps");
+                }
             }
         }
     }

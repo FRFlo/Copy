@@ -23,6 +23,11 @@ namespace Copy.Types
         [JsonProperty(PropertyName = "Delete", Required = Required.DisallowNull)]
         public bool Delete { get; set; } = false;
         /// <summary>
+        /// Optional location where the original file should be moved after a successful copy.
+        /// </summary>
+        [JsonProperty(PropertyName = "MoveOriginalTo", Required = Required.DisallowNull)]
+        public CopyIO? MoveOriginalTo { get; set; } = null;
+        /// <summary>
         /// Filter for files to copy.
         /// </summary>
         [JsonProperty(PropertyName = "Filter", Required = Required.DisallowNull)]
