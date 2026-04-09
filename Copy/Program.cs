@@ -12,10 +12,17 @@ namespace Copy
         {
             try
             {
-                if (args.Length > 0 && args[0] == "config")
+                if (args.Length > 0)
                 {
-                    HandleConfigGeneration();
-                    return;
+                    switch (args[0].ToLowerInvariant())
+                    {
+                        case "config":
+                            HandleConfigGeneration();
+                            return;
+                        case "validate":
+                            HandleConfigValidation(args.Length > 1 ? args[1] : DefaultConfigPath);
+                            return;
+                    }
                 }
 
                 string configPath = args.Length > 0 ? args[0] : DefaultConfigPath;
@@ -26,6 +33,15 @@ namespace Copy
 
                 CopyService copyService = new(config);
                 await copyService.ExecuteTasksAsync();
+            }
+            catch (ConfigValidationException ex)
+            {
+                foreach (string error in ex.Errors)
+                {
+                    Console.Error.WriteLine($"- {error}");
+                }
+
+                Environment.Exit(1);
             }
             catch (Exception ex)
             {
@@ -48,6 +64,12 @@ namespace Copy
             File.WriteAllText(DefaultConfigPath, JsonConvert.SerializeObject(defaultConfig, Formatting.Indented));
 
             LoggerService.Dispose();
+        }
+
+        private static void HandleConfigValidation(string configPath)
+        {
+            Config.FromFile(configPath);
+            Console.WriteLine($"Configuration '{configPath}' is valid.");
         }
     }
 }
