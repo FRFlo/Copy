@@ -3,12 +3,12 @@
 namespace Copy.Types
 {
     /// <summary>
-    /// Input/output for copying files.
+    ///     Input/output for copying files.
     /// </summary>
     public class CopyIO
     {
         /// <summary>
-        /// Create a new instance of the class.
+        ///     Create a new instance of the class.
         /// </summary>
         /// <param name="client">Client to use.</param>
         /// <param name="path">Path to the folder.</param>
@@ -19,12 +19,13 @@ namespace Copy.Types
         }
 
         /// <summary>
-        /// Client to use.
+        ///     Client to use.
         /// </summary>
         [JsonProperty(PropertyName = "Client", Required = Required.Always)]
         public string Client { get; set; }
+
         /// <summary>
-        /// Path to the folder.
+        ///     Path to the folder.
         /// </summary>
         [JsonProperty(PropertyName = "Path", Required = Required.Always)]
         public string Path { get; set; }

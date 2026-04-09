@@ -1,5 +1,5 @@
-﻿using System.Text;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using System.Text;
 
 namespace Copy
 {
@@ -22,19 +22,30 @@ namespace Copy
             _logger = _loggerFactory.CreateLogger("Copy");
         }
 
-        public static void Debug(string message) => 
+        public static void Debug(string message)
+        {
             _logger?.LogDebug(message);
+        }
 
-        public static void Info(string message) => 
+        public static void Info(string message)
+        {
             _logger?.LogInformation(message);
+        }
 
-        public static void Warning(string message) => 
+        public static void Warning(string message)
+        {
             _logger?.LogWarning(message);
+        }
 
-        public static void Error(string message) => 
+        public static void Error(string message)
+        {
             _logger?.LogError(message);
+        }
 
-        public static bool IsDebugEnabled() => _debug;
+        public static bool IsDebugEnabled()
+        {
+            return _debug;
+        }
 
         public static void Dispose()
         {
@@ -45,36 +56,42 @@ namespace Copy
     }
 
     /// <summary>
-    /// Logger class.
+    ///     Logger class.
     /// </summary>
     public static class Logger
     {
         /// <summary>
-        /// Path to the log file.
-        /// <list type="bullet">
-        /// <item><description>In debug mode, it is located in the program folder with the name "debug.log".</description></item>
-        /// <item><description>In production mode, it is located in the program folder with the name "production.log".</description></item>
-        /// </list>
+        ///     Path to the log file.
+        ///     <list type="bullet">
+        ///         <item>
+        ///             <description>In debug mode, it is located in the program folder with the name "debug.log".</description>
+        ///         </item>
+        ///         <item>
+        ///             <description>In production mode, it is located in the program folder with the name "production.log".</description>
+        ///         </item>
+        ///     </list>
         /// </summary>
         public static string LogFilePath { get; set; } = Path.Combine(Directory.GetCurrentDirectory(),
 #if DEBUG
                                                                   "debug.log");
 #else
-                                                                  "production.log");
+            "production.log");
 #endif
         /// <summary>
-        /// Indicates if the logger should write logs to the file.
+        ///     Indicates if the logger should write logs to the file.
         /// </summary>
         public static bool LogToFile { get; set; } = true;
+
         /// <summary>
-        /// Shows a message in the console and writes it to the log file.
+        ///     Shows a message in the console and writes it to the log file.
         /// </summary>
         /// <param name="prefix">Prefix of the message</param>
         /// <param name="prefixColor">Color of the prefix</param>
         /// <param name="message">Message to show</param>
         /// <param name="color">Color of the message</param>
         /// <param name="icon">Icon to show before the message</param>
-        private static void Print(string prefix, ConsoleColor prefixColor, string message, ConsoleColor color = ConsoleColor.White, LoggerIcon? icon = null)
+        private static void Print(string prefix, ConsoleColor prefixColor, string message,
+            ConsoleColor color = ConsoleColor.White, LoggerIcon? icon = null)
         {
             StringBuilder sb = new();
             if (message.EndsWith('\n'))
@@ -97,6 +114,7 @@ namespace Copy
                         Console.ForegroundColor = icon.ForegroundColor;
                         Console.Write($" {icon.Icon} ");
                     }
+
                     Console.BackgroundColor = ConsoleColor.Black;
                     Console.ForegroundColor = color;
                     Console.WriteLine($" {line}");
@@ -105,13 +123,17 @@ namespace Copy
                     sb.Append($"{DateTime.Now:dd/MM/yyyy, HH:mm:fff} {prefix} {line}\n");
                 }
             }
+
             string final = sb.ToString();
 
-            if (LogToFile) File.AppendAllText(LogFilePath, final, Encoding.UTF8);
+            if (LogToFile)
+            {
+                File.AppendAllText(LogFilePath, final, Encoding.UTF8);
+            }
         }
 
         /// <summary>
-        /// Shows a debug message in the console and writes it to the log file.
+        ///     Shows a debug message in the console and writes it to the log file.
         /// </summary>
         /// <param name="message">Message to show</param>
         /// <param name="icon">Icon to show before the message</param>
@@ -121,7 +143,7 @@ namespace Copy
         }
 
         /// <summary>
-        /// Shows a info message in the console and writes it to the log file.
+        ///     Shows a info message in the console and writes it to the log file.
         /// </summary>
         /// <param name="message">Message to show</param>
         /// <param name="icon">Icon to show before the message</param>
@@ -131,7 +153,7 @@ namespace Copy
         }
 
         /// <summary>
-        /// Shows a warn message in the console and writes it to the log file.
+        ///     Shows a warn message in the console and writes it to the log file.
         /// </summary>
         /// <param name="message">Message to show</param>
         /// <param name="icon">Icon to show before the message</param>
@@ -141,7 +163,7 @@ namespace Copy
         }
 
         /// <summary>
-        /// Shows a error message in the console and writes it to the log file.
+        ///     Shows a error message in the console and writes it to the log file.
         /// </summary>
         /// <param name="message">Message to show</param>
         /// <param name="icon">Icon to show before the message</param>
@@ -152,7 +174,7 @@ namespace Copy
     }
 
     /// <summary>
-    /// Class to define an icon for the logger.
+    ///     Class to define an icon for the logger.
     /// </summary>
     /// <param name="icon">Unicode text defining the icon</param>
     /// <param name="iconColor">Foreground color of the icon</param>
@@ -160,15 +182,17 @@ namespace Copy
     public class LoggerIcon(string icon, ConsoleColor iconColor, ConsoleColor iconBackground)
     {
         /// <summary>
-        /// Unicode text defining the icon
+        ///     Unicode text defining the icon
         /// </summary>
         public string Icon { get; set; } = icon;
+
         /// <summary>
-        /// Foreground color of the icon
+        ///     Foreground color of the icon
         /// </summary>
         public ConsoleColor ForegroundColor { get; set; } = iconColor;
+
         /// <summary>
-        /// Background color of the icon
+        ///     Background color of the icon
         /// </summary>
         public ConsoleColor BackgroundColor { get; set; } = iconBackground;
     }
