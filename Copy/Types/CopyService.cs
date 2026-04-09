@@ -67,6 +67,15 @@ namespace Copy.Types
                 throw new ClientNotFoundException($"Destination client {task.Destination.Client} not found");
             }
 
+            IClient? moveOriginalClient = null;
+            if (task.MoveOriginalTo != null)
+            {
+                if (!_clients.TryGetValue(task.MoveOriginalTo.Client, out moveOriginalClient))
+                {
+                    throw new ClientNotFoundException($"MoveOriginalTo client {task.MoveOriginalTo.Client} not found");
+                }
+            }
+
             var sourceFiles = sourceClient.ListFiles(task.Source.Path, task.Filter);
             
             foreach (var filePath in sourceFiles)
@@ -76,7 +85,13 @@ namespace Copy.Types
                     string fileName = Path.GetFileName(filePath);
                     string destPath = Path.Combine(task.Destination.Path, fileName);
 
-                    sourceClient.CopyFile(filePath, destPath);
+                    using Stream sourceStream = sourceClient.GetFile(filePath);
+                    destinationClient.PutFile(destPath, sourceStream);
+
+                    if (task.MoveOriginalTo != null)
+                    {
+                        MoveOriginalFile(task.MoveOriginalTo, moveOriginalClient!, sourceClient, filePath, fileName);
+                    }
 
                     if (task.Delete)
                     {
@@ -89,6 +104,21 @@ namespace Copy.Types
                     // Continue with next file
                 }
             }
+        }
+
+        private static void MoveOriginalFile(CopyIO moveOriginalTo, IClient moveOriginalClient, IClient sourceClient, string sourcePath, string fileName)
+        {
+            string moveDestinationPath = Path.Combine(moveOriginalTo.Path, fileName);
+
+            if (ReferenceEquals(sourceClient, moveOriginalClient))
+            {
+                sourceClient.MoveFile(sourcePath, moveDestinationPath);
+                return;
+            }
+
+            using Stream sourceStream = sourceClient.GetFile(sourcePath);
+            moveOriginalClient.PutFile(moveDestinationPath, sourceStream);
+            sourceClient.DeleteFile(sourcePath);
         }
     }
 }
