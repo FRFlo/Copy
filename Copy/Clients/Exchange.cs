@@ -6,27 +6,21 @@ namespace Copy.Clients
     internal class Exchange : IClient
     {
         /// <summary>
-        /// Client credentials.
-        /// </summary>
-        private readonly Client _credentials;
-        /// <summary>
-        /// FTP client.
+        ///     FTP client.
         /// </summary>
         private readonly ExchangeService ExchangeService;
 
-        public Client Config => _credentials;
-
         /// <summary>
-        /// Constructor.
+        ///     Constructor.
         /// </summary>
         /// <param name="credentials"></param>
         public Exchange(Client credentials)
         {
-            _credentials = credentials;
+            Config = credentials;
 
             if (credentials.Autodiscover)
             {
-                ExchangeService = new ExchangeService()
+                ExchangeService = new ExchangeService
                 {
                     Credentials = new WebCredentials(credentials.Username, credentials.Password)
                 };
@@ -34,13 +28,18 @@ namespace Copy.Clients
             }
             else
             {
-                ExchangeService = new ExchangeService()
+                ExchangeService = new ExchangeService
                 {
                     Credentials = new WebCredentials(credentials.Username, credentials.Password),
                     Url = new Uri(credentials.Host)
                 };
             }
         }
+
+        /// <summary>
+        ///     Client credentials.
+        /// </summary>
+        public Client Config { get; }
 
         public bool DoFileExist(string path)
         {

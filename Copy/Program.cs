@@ -19,12 +19,12 @@ namespace Copy
                 }
 
                 string configPath = args.Length > 0 ? args[0] : DefaultConfigPath;
-                var config = Config.FromFile(configPath);
-                
+                Config config = Config.FromFile(configPath);
+
                 // Initialize logging
                 LoggerService.Initialize(config.Debug);
 
-                var copyService = new CopyService(config);
+                CopyService copyService = new(config);
                 await copyService.ExecuteTasksAsync();
             }
             catch (Exception ex)
@@ -42,11 +42,11 @@ namespace Copy
         {
             LoggerService.Initialize();
             LoggerService.Info("Creating default config and scheme files");
-            
-            var defaultConfig = Config.CreateDefault();
+
+            Config defaultConfig = Config.CreateDefault();
             File.WriteAllText(DefaultSchemePath, Config.GenerateSchema());
             File.WriteAllText(DefaultConfigPath, JsonConvert.SerializeObject(defaultConfig, Formatting.Indented));
-            
+
             LoggerService.Dispose();
         }
     }
