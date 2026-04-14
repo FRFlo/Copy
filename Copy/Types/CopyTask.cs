@@ -57,5 +57,11 @@ namespace Copy.Types
         /// </summary>
         [JsonProperty(PropertyName = "ZipFileName", NullValueHandling = NullValueHandling.Ignore)]
         public string? ZipFileName { get; set; }
+
+        /// <summary>
+        ///     Whether an existing destination file should be overwritten.
+        /// </summary>
+        [JsonProperty(PropertyName = "Overwrite", Required = Required.DisallowNull)]
+        public bool Overwrite { get; set; } = true;
     }
 }

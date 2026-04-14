@@ -89,11 +89,9 @@ namespace Copy.Clients
                 Logger.Warn("Filtering by author is not supported by SFTP");
             }
 
-            Regex nameRegex = new(filter.Name);
-            Regex authorRegex = new(filter.Author);
 
             IEnumerable<ISftpFile> files = SftpClient.ListDirectory(path)
-                .Where(f => nameRegex.IsMatch(f.Name) && f.LastWriteTime >= filter.CreatedAfter &&
+                .Where(f => new Regex(filter.Name).IsMatch(f.Name) && f.LastWriteTime >= filter.CreatedAfter &&
                             (ulong)f.Length <= filter.MaxSize && (ulong)f.Length >= filter.MinSize);
             return files.Select(f => f.FullName.Remove(0, 1)).ToArray();
         }

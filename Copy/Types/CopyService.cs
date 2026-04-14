@@ -88,6 +88,10 @@ namespace Copy.Types
                     Logger.Error("Failed to execute task", ex);
                     // Continue with next task instead of throwing
                 }
+                finally
+                {
+                    Logger.FlushTaskNotifications(taskId);
+                }
             }
         }
 
@@ -127,6 +131,7 @@ namespace Copy.Types
 
             int successCount = 0;
             int failureCount = 0;
+            int skippedCount = 0;
 
             foreach (string filePath in sourceFiles)
             {
@@ -142,6 +147,13 @@ namespace Copy.Types
 
                     Logger.Info("Starting file workflow");
 
+                    if (!task.Overwrite && destinationClient.DoFileExist(destPath))
+                    {
+                        Logger.Warn("Destination file already exists and overwrite is disabled; skipping file");
+                        skippedCount++;
+                        continue;
+                    }
+
                     using Stream sourceStream = sourceClient.GetFile(filePath);
                     Logger.Debug("Source file stream opened successfully");
                     destinationClient.PutFile(destPath, sourceStream);
@@ -149,7 +161,7 @@ namespace Copy.Types
 
                     if (task.MoveOriginalTo != null)
                     {
-                        MoveOriginalFile(task.MoveOriginalTo, moveOriginalClient!, sourceClient, filePath, fileName);
+                        MoveOriginalFile(task.MoveOriginalTo, moveOriginalClient!, sourceClient, filePath, fileName, task.Overwrite);
                     }
 
                     if (task.Delete)
@@ -170,11 +182,12 @@ namespace Copy.Types
                 }
             }
 
-            Logger.Info($"Workflow completed. Successful files: {successCount}. Failed files: {failureCount}.");
+            Logger.Info(
+                $"Workflow completed. Successful files: {successCount}. Failed files: {failureCount}. Skipped files: {skippedCount}.");
         }
 
         private static void MoveOriginalFile(CopyIO moveOriginalTo, IClient moveOriginalClient, IClient sourceClient,
-            string sourcePath, string fileName)
+            string sourcePath, string fileName, bool overwrite)
         {
             string moveDestinationPath = Path.Combine(moveOriginalTo.Path, fileName);
             using IDisposable scope = Logger.BeginScope(
@@ -182,6 +195,13 @@ namespace Copy.Types
                 ("moveOriginalPath", moveDestinationPath));
 
             Logger.Info("Moving original file after successful transfer");
+
+            if (!overwrite && moveOriginalClient.DoFileExist(moveDestinationPath))
+            {
+                Logger.Warn(
+                    "Archive destination file already exists and overwrite is disabled; keeping original file in place");
+                return;
+            }
 
             if (ReferenceEquals(sourceClient, moveOriginalClient))
             {

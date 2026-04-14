@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+using Copy.Types;
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.Text;
 
 namespace Copy
@@ -60,6 +62,31 @@ namespace Copy
     /// </summary>
     public static class Logger
     {
+        private sealed class TaskNotificationBatch(string taskId, string? runId)
+        {
+            private readonly List<NotificationEmailEntry> _entries = [];
+
+            public string TaskId { get; } = taskId;
+            public string? RunId { get; private set; } = runId;
+
+            public void Add(NotificationEmailEntry entry, string? runId)
+            {
+                lock (_entries)
+                {
+                    RunId ??= runId;
+                    _entries.Add(entry);
+                }
+            }
+
+            public NotificationEmailEntry[] Snapshot()
+            {
+                lock (_entries)
+                {
+                    return [.. _entries];
+                }
+            }
+        }
+
         private sealed class LogScopeState(IReadOnlyDictionary<string, string> values, LogScopeState? parent)
         {
             public IReadOnlyDictionary<string, string> Values { get; } = values;
@@ -83,6 +110,9 @@ namespace Copy
         }
 
         private static readonly AsyncLocal<LogScopeState?> _scope = new();
+        private static readonly AsyncLocal<bool> _isSendingMailNotification = new();
+        private static readonly ConcurrentDictionary<string, TaskNotificationBatch> _taskNotifications = new(StringComparer.OrdinalIgnoreCase);
+        private static EmailNotifier? _emailNotifier;
 
         /// <summary>
         ///     Path to the log file.
@@ -105,6 +135,11 @@ namespace Copy
         ///     Indicates if the logger should write logs to the file.
         /// </summary>
         public static bool LogToFile { get; set; } = true;
+
+        internal static void ConfigureNotifications(SmtpSettings? smtp, string[] recipients)
+        {
+            _emailNotifier = EmailNotifier.Create(recipients, smtp);
+        }
 
         /// <summary>
         ///     Push contextual properties that will automatically be appended to every log line
@@ -137,10 +172,11 @@ namespace Copy
         /// <param name="color">Color of the message</param>
         /// <param name="icon">Icon to show before the message</param>
         private static void Print(string prefix, ConsoleColor prefixColor, string message,
-            ConsoleColor color = ConsoleColor.White, LoggerIcon? icon = null)
+            ConsoleColor color = ConsoleColor.White, LoggerIcon? icon = null, string? notificationMessage = null)
         {
             StringBuilder sb = new();
-            string contextPrefix = BuildContextPrefix();
+            IReadOnlyDictionary<string, string> contextValues = GetCurrentContextValues();
+            string contextPrefix = BuildContextPrefix(contextValues);
             if (message.EndsWith('\n'))
             {
                 message = message[..^1];
@@ -177,6 +213,8 @@ namespace Copy
             {
                 File.AppendAllText(LogFilePath, final, Encoding.UTF8);
             }
+
+            TrySendNotification(prefix, contextPrefix, notificationMessage ?? message, contextValues);
         }
 
         /// <summary>
@@ -227,15 +265,88 @@ namespace Copy
         /// <param name="icon">Icon to show before the message</param>
         public static void Error(string message, Exception exception, LoggerIcon? icon = null)
         {
-            Print("ERREUR", ConsoleColor.DarkRed, $"{message}{Environment.NewLine}{exception}", ConsoleColor.Red, icon);
+            Print("ERREUR", ConsoleColor.DarkRed, $"{message}{Environment.NewLine}{exception}", ConsoleColor.Red, icon,
+                message);
         }
 
-        private static string BuildContextPrefix()
+        internal static void FlushTaskNotifications(string taskId)
+        {
+            if (_emailNotifier == null || _isSendingMailNotification.Value)
+            {
+                return;
+            }
+
+            if (!_taskNotifications.TryRemove(taskId, out TaskNotificationBatch? batch))
+            {
+                return;
+            }
+
+            NotificationEmailEntry[] entries = batch.Snapshot();
+            if (entries.Length == 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _isSendingMailNotification.Value = true;
+                _emailNotifier.SendTaskSummary(batch.TaskId, batch.RunId, entries);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Failed to send task notification email for {taskId}: {ex}");
+            }
+            finally
+            {
+                _isSendingMailNotification.Value = false;
+            }
+        }
+
+        private static void TrySendNotification(string prefix, string contextPrefix, string message,
+            IReadOnlyDictionary<string, string> contextValues)
+        {
+            if (_emailNotifier == null || _isSendingMailNotification.Value)
+            {
+                return;
+            }
+
+            if (prefix != "WARN" && prefix != "ERREUR")
+            {
+                return;
+            }
+
+            NotificationEmailEntry entry = new(DateTime.Now, prefix, contextPrefix.Trim(), message);
+
+            if (contextValues.TryGetValue("taskId", out string? taskId) && !string.IsNullOrWhiteSpace(taskId))
+            {
+                contextValues.TryGetValue("runId", out string? runId);
+                TaskNotificationBatch batch = _taskNotifications.GetOrAdd(taskId,
+                    id => new TaskNotificationBatch(id, runId));
+                batch.Add(entry, runId);
+                return;
+            }
+
+            try
+            {
+                _isSendingMailNotification.Value = true;
+                _emailNotifier.SendImmediate(prefix, contextPrefix, message);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Failed to send {prefix} notification email: {ex}");
+            }
+            finally
+            {
+                _isSendingMailNotification.Value = false;
+            }
+        }
+
+        private static IReadOnlyDictionary<string, string> GetCurrentContextValues()
         {
             LogScopeState? current = _scope.Value;
             if (current == null)
             {
-                return string.Empty;
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
 
             Stack<LogScopeState> states = new();
@@ -254,12 +365,17 @@ namespace Copy
                 }
             }
 
-            if (merged.Count == 0)
+            return merged;
+        }
+
+        private static string BuildContextPrefix(IReadOnlyDictionary<string, string> contextValues)
+        {
+            if (contextValues.Count == 0)
             {
                 return string.Empty;
             }
 
-            return string.Join(' ', merged
+            return string.Join(' ', contextValues
                 .OrderBy(entry => GetContextPriority(entry.Key))
                 .Select(entry => $"[{entry.Key}={entry.Value}]")
                 .ToArray()) + ' ';

@@ -7,8 +7,6 @@ namespace Copy.Types
     /// </summary>
     public class CopyFilter
     {
-        private DateTime _createdAfter = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Local);
-
         /// <summary>
         ///     Pattern the name of the files must match.
         /// </summary>
@@ -25,16 +23,8 @@ namespace Copy.Types
         ///     Date the files must be created after.
         /// </summary>
         [JsonProperty(PropertyName = "CreatedAfter", Required = Required.DisallowNull)]
-        public DateTime CreatedAfter
-        {
-            get => _createdAfter;
-            set => _createdAfter = value.Kind switch
-            {
-                DateTimeKind.Utc => value.ToLocalTime(),
-                DateTimeKind.Local => value,
-                _ => DateTime.SpecifyKind(value, DateTimeKind.Local)
-            };
-        }
+        [JsonConverter(typeof(DateTimeOrTimeSpanJsonConverter))]
+        public DateTime CreatedAfter { get; set; } = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Local);
 
         /// <summary>
         ///     Size the files must not exceed.

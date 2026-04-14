@@ -36,6 +36,7 @@ namespace Copy
                 LoggerService.Initialize(config.Debug);
 
                 using IDisposable scope = Logger.BeginScope(("runId", runId));
+                Logger.ConfigureNotifications(config.Smtp, config.MailTo);
                 Logger.Info($"Configuration loaded successfully from '{configPath}'");
 
                 CopyService copyService = new(config);
