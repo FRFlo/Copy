@@ -15,33 +15,60 @@ namespace Copy.Clients
         public SFTP(Client credentials)
         {
             Config = credentials;
-            if (credentials.Fingerprint != null)
-            {
-                using PrivateKeyFile privateKey = new(credentials.PrivateKey);
-                SftpClient = new SftpClient(credentials.Host, credentials.Port, credentials.Username, privateKey);
-            }
-            else
-            {
-                SftpClient = new SftpClient(credentials.Host, credentials.Port, credentials.Username,
-                    credentials.Password);
-            }
+            using IDisposable scope = Logger.BeginScope(
+                ("phase", "auth"),
+                ("protocol", nameof(SFTP)),
+                ("host", credentials.Host),
+                ("port", credentials.Port.ToString()),
+                ("username", credentials.Username),
+                ("authMode", string.IsNullOrEmpty(credentials.PrivateKey) ? "password" : "private-key"));
 
-            SftpClient.HostKeyReceived += (client, args) =>
+            Logger.Info("Starting SFTP authentication");
+
+            try
             {
                 if (credentials.Fingerprint == null)
                 {
-                    args.CanTrust = true;
+                    SftpClient = new SftpClient(credentials.Host, credentials.Port, credentials.Username,
+                        credentials.Password);
                 }
-                else if (args.FingerPrintMD5 == credentials.Fingerprint)
+                else if (!string.IsNullOrEmpty(credentials.PrivateKey))
                 {
-                    args.CanTrust = true;
+                    using PrivateKeyFile privateKey = new(credentials.PrivateKey);
+                    SftpClient = new SftpClient(credentials.Host, credentials.Port, credentials.Username, privateKey);
                 }
                 else
                 {
-                    args.CanTrust = false;
+                    SftpClient = new SftpClient(credentials.Host, credentials.Port, credentials.Username,
+                        credentials.Password);
                 }
-            };
-            SftpClient.Connect();
+
+                SftpClient.HostKeyReceived += (client, args) =>
+                {
+                    if (credentials.Fingerprint == null)
+                    {
+                        args.CanTrust = true;
+                        Logger.Debug("Accepted SFTP host key because no fingerprint is configured");
+                    }
+                    else if (args.FingerPrintMD5 == credentials.Fingerprint)
+                    {
+                        args.CanTrust = true;
+                        Logger.Debug("Accepted SFTP host key because fingerprint matched");
+                    }
+                    else
+                    {
+                        args.CanTrust = false;
+                        Logger.Warn("Rejected SFTP host key because fingerprint did not match");
+                    }
+                };
+                SftpClient.Connect();
+                Logger.Info("SFTP authentication succeeded");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("SFTP authentication failed", ex);
+                throw;
+            }
         }
 
         /// <summary>
