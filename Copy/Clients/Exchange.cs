@@ -17,22 +17,43 @@ namespace Copy.Clients
         public Exchange(Client credentials)
         {
             Config = credentials;
+            using IDisposable scope = Logger.BeginScope(
+                ("phase", "auth"),
+                ("protocol", nameof(Exchange)),
+                ("client", credentials.Name),
+                ("host", credentials.Host),
+                ("port", credentials.Port.ToString()),
+                ("autodiscover", credentials.Autodiscover.ToString()));
 
-            if (credentials.Autodiscover)
+            Logger.Info("Starting Exchange authentication");
+
+            try
             {
-                ExchangeService = new ExchangeService
+                if (credentials.Autodiscover)
                 {
-                    Credentials = new WebCredentials(credentials.Username, credentials.Password)
-                };
-                ExchangeService.AutodiscoverUrl(credentials.Username);
+                    ExchangeService = new ExchangeService
+                    {
+                        Credentials = new WebCredentials(credentials.Username, credentials.Password)
+                    };
+                    ExchangeService.AutodiscoverUrl(credentials.Username);
+                    Logger.Info("Exchange autodiscover succeeded");
+                }
+                else
+                {
+                    ExchangeService = new ExchangeService
+                    {
+                        Credentials = new WebCredentials(credentials.Username, credentials.Password),
+                        Url = new Uri(credentials.Host)
+                    };
+                    Logger.Info("Exchange service initialized with explicit URL");
+                }
+
+                Logger.Info("Exchange authentication configuration succeeded");
             }
-            else
+            catch (Exception ex)
             {
-                ExchangeService = new ExchangeService
-                {
-                    Credentials = new WebCredentials(credentials.Username, credentials.Password),
-                    Url = new Uri(credentials.Host)
-                };
+                Logger.Error("Exchange authentication failed", ex);
+                throw;
             }
         }
 

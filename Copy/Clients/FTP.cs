@@ -22,25 +22,46 @@ namespace Copy.Clients
         public FTP(Client credentials)
         {
             Config = credentials;
-            FtpClient = new FtpClient(credentials.Host,
-                new NetworkCredential(credentials.Username, credentials.Password), credentials.Port);
-            FtpClient.Config.EncryptionMode = FtpEncryptionMode.Auto;
-            FtpClient.ValidateCertificate += (client, args) =>
+            using IDisposable scope = Logger.BeginScope(
+                ("phase", "auth"),
+                ("protocol", nameof(FTP)),
+                ("client", credentials.Name),
+                ("host", credentials.Host),
+                ("port", credentials.Port.ToString()));
+
+            Logger.Info("Starting FTP authentication");
+
+            try
             {
-                if (credentials.Fingerprint == null)
+                FtpClient = new FtpClient(credentials.Host,
+                    new NetworkCredential(credentials.Username, credentials.Password), credentials.Port);
+                FtpClient.Config.EncryptionMode = FtpEncryptionMode.Auto;
+                FtpClient.ValidateCertificate += (client, args) =>
                 {
-                    args.Accept = true;
-                }
-                else if (args.Certificate.GetCertHashString() == credentials.Fingerprint)
-                {
-                    args.Accept = true;
-                }
-                else
-                {
-                    args.Accept = false;
-                }
-            };
-            FtpClient.AutoConnect();
+                    if (credentials.Fingerprint == null)
+                    {
+                        args.Accept = true;
+                        Logger.Debug("Accepted FTP certificate because no fingerprint is configured");
+                    }
+                    else if (args.Certificate.GetCertHashString() == credentials.Fingerprint)
+                    {
+                        args.Accept = true;
+                        Logger.Debug("Accepted FTP certificate because fingerprint matched");
+                    }
+                    else
+                    {
+                        args.Accept = false;
+                        Logger.Warn("Rejected FTP certificate because fingerprint did not match");
+                    }
+                };
+                FtpClient.AutoConnect();
+                Logger.Info("FTP authentication succeeded");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("FTP authentication failed", ex);
+                throw;
+            }
         }
 
         /// <summary>

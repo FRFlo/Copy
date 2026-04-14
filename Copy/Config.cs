@@ -192,6 +192,7 @@ namespace Copy
                 [
                     new CopyTask
                     {
+                        Id = "local-to-ftp-json",
                         Source = new CopyIO("Local", "C:/Copy/inbox"),
                         Destination = new CopyIO("FTP", "/incoming"),
                         Delete = true,
@@ -206,6 +207,7 @@ namespace Copy
                     },
                     new CopyTask
                     {
+                        Id = "local-to-sftp-reports",
                         Source = new CopyIO("Local", "C:/Copy/outbox"),
                         Destination = new CopyIO("SFTP", "/upload"),
                         MoveOriginalTo = new CopyIO("Archive", "C:/Copy/archive"),
@@ -220,6 +222,7 @@ namespace Copy
                     },
                     new CopyTask
                     {
+                        Id = "local-to-ftp-zip",
                         Source = new CopyIO("Local", "C:/Copy/to-zip"),
                         Destination = new CopyIO("FTP", "destination"),
                         Delete = false,
@@ -315,9 +318,23 @@ namespace Copy
                 validationErrors.Add("La configuration doit contenir au moins une tâche");
             }
 
-            HashSet<string> clientNames = (Clients ?? []).Where(c => !string.IsNullOrEmpty(c.Name)).Select(c => c.Name).ToHashSet()!;
+            HashSet<string> clientNames = (Clients ?? []).Where(c => !string.IsNullOrEmpty(c.Name)).Select(c => c.Name)
+                .ToHashSet()!;
+            HashSet<string> taskIds = [];
             foreach (CopyTask task in Tasks ?? [])
             {
+                if (task.Id != null)
+                {
+                    if (string.IsNullOrWhiteSpace(task.Id))
+                    {
+                        validationErrors.Add("L'identifiant de la tâche ne peut pas être vide");
+                    }
+                    else if (!taskIds.Add(task.Id))
+                    {
+                        validationErrors.Add($"L'identifiant de tâche {task.Id} est dupliqué");
+                    }
+                }
+
                 if (task.Source == null)
                 {
                     validationErrors.Add("La source de la tâche ne peut pas être vide");

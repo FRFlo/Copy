@@ -8,6 +8,13 @@ namespace Copy.Types
     public class CopyTask
     {
         /// <summary>
+        ///     Stable identifier for the workflow. When provided in configuration, this ID is used in logs
+        ///     so successful and failed runs can be traced back to their origin.
+        /// </summary>
+        [JsonProperty(PropertyName = "Id", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+        public string? Id { get; set; }
+
+        /// <summary>
         ///     Source of files to copy.
         /// </summary>
         [JsonProperty(PropertyName = "Source", Required = Required.Always)]
