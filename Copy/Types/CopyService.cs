@@ -88,6 +88,10 @@ namespace Copy.Types
                     Logger.Error("Failed to execute task", ex);
                     // Continue with next task instead of throwing
                 }
+                finally
+                {
+                    Logger.FlushTaskNotifications(taskId);
+                }
             }
         }
 

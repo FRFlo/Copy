@@ -1,5 +1,6 @@
-﻿using Copy.Types;
+using Copy.Types;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.Text;
 
 namespace Copy
@@ -61,6 +62,31 @@ namespace Copy
     /// </summary>
     public static class Logger
     {
+        private sealed class TaskNotificationBatch(string taskId, string? runId)
+        {
+            private readonly List<NotificationEmailEntry> _entries = [];
+
+            public string TaskId { get; } = taskId;
+            public string? RunId { get; private set; } = runId;
+
+            public void Add(NotificationEmailEntry entry, string? runId)
+            {
+                lock (_entries)
+                {
+                    RunId ??= runId;
+                    _entries.Add(entry);
+                }
+            }
+
+            public NotificationEmailEntry[] Snapshot()
+            {
+                lock (_entries)
+                {
+                    return [.. _entries];
+                }
+            }
+        }
+
         private sealed class LogScopeState(IReadOnlyDictionary<string, string> values, LogScopeState? parent)
         {
             public IReadOnlyDictionary<string, string> Values { get; } = values;
@@ -85,6 +111,7 @@ namespace Copy
 
         private static readonly AsyncLocal<LogScopeState?> _scope = new();
         private static readonly AsyncLocal<bool> _isSendingMailNotification = new();
+        private static readonly ConcurrentDictionary<string, TaskNotificationBatch> _taskNotifications = new(StringComparer.OrdinalIgnoreCase);
         private static EmailNotifier? _emailNotifier;
 
         /// <summary>
@@ -148,7 +175,8 @@ namespace Copy
             ConsoleColor color = ConsoleColor.White, LoggerIcon? icon = null)
         {
             StringBuilder sb = new();
-            string contextPrefix = BuildContextPrefix();
+            IReadOnlyDictionary<string, string> contextValues = GetCurrentContextValues();
+            string contextPrefix = BuildContextPrefix(contextValues);
             if (message.EndsWith('\n'))
             {
                 message = message[..^1];
@@ -186,7 +214,7 @@ namespace Copy
                 File.AppendAllText(LogFilePath, final, Encoding.UTF8);
             }
 
-            TrySendNotification(prefix, contextPrefix, message);
+            TrySendNotification(prefix, contextPrefix, message, contextValues);
         }
 
         /// <summary>
@@ -240,7 +268,41 @@ namespace Copy
             Print("ERREUR", ConsoleColor.DarkRed, $"{message}{Environment.NewLine}{exception}", ConsoleColor.Red, icon);
         }
 
-        private static void TrySendNotification(string prefix, string contextPrefix, string message)
+        internal static void FlushTaskNotifications(string taskId)
+        {
+            if (_emailNotifier == null || _isSendingMailNotification.Value)
+            {
+                return;
+            }
+
+            if (!_taskNotifications.TryRemove(taskId, out TaskNotificationBatch? batch))
+            {
+                return;
+            }
+
+            NotificationEmailEntry[] entries = batch.Snapshot();
+            if (entries.Length == 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _isSendingMailNotification.Value = true;
+                _emailNotifier.SendTaskSummary(batch.TaskId, batch.RunId, entries);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Failed to send task notification email for {taskId}: {ex}");
+            }
+            finally
+            {
+                _isSendingMailNotification.Value = false;
+            }
+        }
+
+        private static void TrySendNotification(string prefix, string contextPrefix, string message,
+            IReadOnlyDictionary<string, string> contextValues)
         {
             if (_emailNotifier == null || _isSendingMailNotification.Value)
             {
@@ -252,10 +314,21 @@ namespace Copy
                 return;
             }
 
+            NotificationEmailEntry entry = new(DateTime.Now, prefix, contextPrefix.Trim(), message);
+
+            if (contextValues.TryGetValue("taskId", out string? taskId) && !string.IsNullOrWhiteSpace(taskId))
+            {
+                contextValues.TryGetValue("runId", out string? runId);
+                TaskNotificationBatch batch = _taskNotifications.GetOrAdd(taskId,
+                    id => new TaskNotificationBatch(id, runId));
+                batch.Add(entry, runId);
+                return;
+            }
+
             try
             {
                 _isSendingMailNotification.Value = true;
-                _emailNotifier.Send(prefix, contextPrefix, message);
+                _emailNotifier.SendImmediate(prefix, contextPrefix, message);
             }
             catch (Exception ex)
             {
@@ -267,12 +340,12 @@ namespace Copy
             }
         }
 
-        private static string BuildContextPrefix()
+        private static IReadOnlyDictionary<string, string> GetCurrentContextValues()
         {
             LogScopeState? current = _scope.Value;
             if (current == null)
             {
-                return string.Empty;
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
 
             Stack<LogScopeState> states = new();
@@ -291,12 +364,17 @@ namespace Copy
                 }
             }
 
-            if (merged.Count == 0)
+            return merged;
+        }
+
+        private static string BuildContextPrefix(IReadOnlyDictionary<string, string> contextValues)
+        {
+            if (contextValues.Count == 0)
             {
                 return string.Empty;
             }
 
-            return string.Join(' ', merged
+            return string.Join(' ', contextValues
                 .OrderBy(entry => GetContextPriority(entry.Key))
                 .Select(entry => $"[{entry.Key}={entry.Value}]")
                 .ToArray()) + ' ';
