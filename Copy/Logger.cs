@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Copy.Types;
+using Microsoft.Extensions.Logging;
 using System.Text;
 
 namespace Copy
@@ -83,6 +84,8 @@ namespace Copy
         }
 
         private static readonly AsyncLocal<LogScopeState?> _scope = new();
+        private static readonly AsyncLocal<bool> _isSendingMailNotification = new();
+        private static EmailNotifier? _emailNotifier;
 
         /// <summary>
         ///     Path to the log file.
@@ -105,6 +108,11 @@ namespace Copy
         ///     Indicates if the logger should write logs to the file.
         /// </summary>
         public static bool LogToFile { get; set; } = true;
+
+        internal static void ConfigureNotifications(SmtpSettings? smtp, string[] recipients)
+        {
+            _emailNotifier = EmailNotifier.Create(recipients, smtp);
+        }
 
         /// <summary>
         ///     Push contextual properties that will automatically be appended to every log line
@@ -177,6 +185,8 @@ namespace Copy
             {
                 File.AppendAllText(LogFilePath, final, Encoding.UTF8);
             }
+
+            TrySendNotification(prefix, contextPrefix, message);
         }
 
         /// <summary>
@@ -228,6 +238,33 @@ namespace Copy
         public static void Error(string message, Exception exception, LoggerIcon? icon = null)
         {
             Print("ERREUR", ConsoleColor.DarkRed, $"{message}{Environment.NewLine}{exception}", ConsoleColor.Red, icon);
+        }
+
+        private static void TrySendNotification(string prefix, string contextPrefix, string message)
+        {
+            if (_emailNotifier == null || _isSendingMailNotification.Value)
+            {
+                return;
+            }
+
+            if (prefix != "WARN" && prefix != "ERREUR")
+            {
+                return;
+            }
+
+            try
+            {
+                _isSendingMailNotification.Value = true;
+                _emailNotifier.Send(prefix, contextPrefix, message);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Failed to send {prefix} notification email: {ex}");
+            }
+            finally
+            {
+                _isSendingMailNotification.Value = false;
+            }
         }
 
         private static string BuildContextPrefix()
