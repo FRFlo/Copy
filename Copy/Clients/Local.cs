@@ -39,6 +39,7 @@ namespace Copy.Clients
 
             Regex nameRegex = new(filter.Name);
             Regex authorRegex = new(filter.Author);
+            DateTime createdAfter = filter.CreatedAfter;
 
             return
             [
@@ -49,7 +50,7 @@ namespace Copy.Clients
                         bool authorMatch = authorRegex.IsMatch(GetFileOwner(f));
                         return nameRegex.IsMatch(Path.GetFileName(f)) &&
                                authorMatch &&
-                               File.GetCreationTime(f) >= filter.CreatedAfter &&
+                               File.GetCreationTime(f) >= createdAfter &&
                                (ulong)fileInfo.Length <= filter.MaxSize &&
                                (ulong)fileInfo.Length >= filter.MinSize;
                     })

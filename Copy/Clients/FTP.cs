@@ -84,10 +84,11 @@ namespace Copy.Clients
 
             Regex nameRegex = new(filter.Name);
             Regex authorRegex = new(filter.Author);
+            DateTime createdAfter = filter.CreatedAfter;
 
             FtpListItem[] files = FtpClient.GetListing(path)
                 .Where(f => nameRegex.IsMatch(f.Name) && authorRegex.IsMatch(f.RawOwner) &&
-                            f.Created >= filter.CreatedAfter && (ulong)f.Size <= filter.MaxSize &&
+                            f.Created >= createdAfter && (ulong)f.Size <= filter.MaxSize &&
                             (ulong)f.Size >= filter.MinSize)
                 .ToArray();
             return files.Select(f => Path.Combine(path, f.Name)).ToArray();
