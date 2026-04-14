@@ -127,6 +127,7 @@ namespace Copy.Types
 
             int successCount = 0;
             int failureCount = 0;
+            int skippedCount = 0;
 
             foreach (string filePath in sourceFiles)
             {
@@ -141,6 +142,13 @@ namespace Copy.Types
                         ("destinationFile", destPath));
 
                     Logger.Info("Starting file workflow");
+
+                    if (!task.Overwrite && destinationClient.DoFileExist(destPath))
+                    {
+                        Logger.Warn("Destination file already exists and overwrite is disabled; skipping file");
+                        skippedCount++;
+                        continue;
+                    }
 
                     using Stream sourceStream = sourceClient.GetFile(filePath);
                     Logger.Debug("Source file stream opened successfully");
@@ -170,7 +178,8 @@ namespace Copy.Types
                 }
             }
 
-            Logger.Info($"Workflow completed. Successful files: {successCount}. Failed files: {failureCount}.");
+            Logger.Info(
+                $"Workflow completed. Successful files: {successCount}. Failed files: {failureCount}. Skipped files: {skippedCount}.");
         }
 
         private static void MoveOriginalFile(CopyIO moveOriginalTo, IClient moveOriginalClient, IClient sourceClient,
