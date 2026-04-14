@@ -40,6 +40,19 @@ namespace Copy
         public List<CopyTask> Tasks { get; set; } = [];
 
         /// <summary>
+        ///     Mail recipients that receive warning and error notifications.
+        /// </summary>
+        [JsonProperty(nameof(MailTo), Required = Required.AllowNull)]
+        [JsonConverter(typeof(SingleOrArrayConverter<string>))]
+        public string[] MailTo { get; set; } = [];
+
+        /// <summary>
+        ///     SMTP settings used to send warning and error notifications.
+        /// </summary>
+        [JsonProperty(nameof(Smtp), Required = Required.AllowNull)]
+        public SmtpSettings? Smtp { get; set; }
+
+        /// <summary>
         ///     Load the configuration from the file and environment variables
         /// </summary>
         /// <param name="path">Path to the configuration file.</param>
@@ -76,6 +89,20 @@ namespace Copy
 
             config.Clients ??= [];
             config.Tasks ??= [];
+            config.MailTo ??= [];
+
+            bool hasSmtpEnvironmentOverride =
+                !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("COPY_SMTP_HOST")) ||
+                !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("COPY_SMTP_USERNAME")) ||
+                !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("COPY_SMTP_PASSWORD")) ||
+                !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("COPY_SMTP_FROM")) ||
+                !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("COPY_SMTP_PORT")) ||
+                !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("COPY_SMTP_ENABLESSL"));
+
+            if (config.Smtp == null && hasSmtpEnvironmentOverride)
+            {
+                config.Smtp = new SmtpSettings();
+            }
 
             // Override with environment variables
             foreach (Client client in config.Clients)
@@ -116,6 +143,43 @@ namespace Copy
                 }
             }
 
+            if (config.Smtp != null)
+            {
+                string? smtpHost = Environment.GetEnvironmentVariable("COPY_SMTP_HOST");
+                if (!string.IsNullOrWhiteSpace(smtpHost))
+                {
+                    config.Smtp.Host = smtpHost;
+                }
+
+                string? smtpUsername = Environment.GetEnvironmentVariable("COPY_SMTP_USERNAME");
+                if (!string.IsNullOrWhiteSpace(smtpUsername))
+                {
+                    config.Smtp.Username = smtpUsername;
+                }
+
+                string? smtpPassword = Environment.GetEnvironmentVariable("COPY_SMTP_PASSWORD");
+                if (!string.IsNullOrWhiteSpace(smtpPassword))
+                {
+                    config.Smtp.Password = smtpPassword;
+                }
+
+                string? smtpFrom = Environment.GetEnvironmentVariable("COPY_SMTP_FROM");
+                if (!string.IsNullOrWhiteSpace(smtpFrom))
+                {
+                    config.Smtp.From = smtpFrom;
+                }
+
+                if (int.TryParse(Environment.GetEnvironmentVariable("COPY_SMTP_PORT"), out int smtpPort))
+                {
+                    config.Smtp.Port = smtpPort;
+                }
+
+                if (bool.TryParse(Environment.GetEnvironmentVariable("COPY_SMTP_ENABLESSL"), out bool smtpEnableSsl))
+                {
+                    config.Smtp.EnableSsl = smtpEnableSsl;
+                }
+            }
+
             // Validate the configuration
             List<string> validationErrors = config.GetValidationErrors();
             if (deserializationErrors.Count > 0 || validationErrors.Count > 0)
@@ -144,6 +208,16 @@ namespace Copy
             return new Config
             {
                 Debug = false,
+                MailTo = ["ops@example.com"],
+                Smtp = new SmtpSettings
+                {
+                    Host = "smtp.example.com",
+                    Port = 587,
+                    Username = "smtp-user",
+                    Password = "smtp-password",
+                    From = "copy@example.com",
+                    EnableSsl = true
+                },
                 Clients =
                 [
                     new Client
@@ -316,6 +390,51 @@ namespace Copy
             if (Tasks == null || Tasks.Count == 0)
             {
                 validationErrors.Add("La configuration doit contenir au moins une tâche");
+            }
+
+            string[] normalizedRecipients = EmailNotifier.NormalizeRecipients(MailTo);
+            MailTo = normalizedRecipients;
+
+            foreach (string recipient in MailTo)
+            {
+                if (!EmailNotifier.IsValidEmailAddress(recipient))
+                {
+                    validationErrors.Add($"L'adresse email {recipient} est invalide");
+                }
+            }
+
+            if (MailTo.Length > 0 && Smtp == null)
+            {
+                validationErrors.Add("MailTo nécessite une configuration SMTP pour envoyer les notifications");
+            }
+
+            if (Smtp != null)
+            {
+                if (string.IsNullOrWhiteSpace(Smtp.Host))
+                {
+                    validationErrors.Add("L'hôte SMTP ne peut pas être vide");
+                }
+
+                if (Smtp.Port <= 0)
+                {
+                    validationErrors.Add("Le port SMTP doit être supérieur à 0");
+                }
+
+                if (string.IsNullOrWhiteSpace(Smtp.From))
+                {
+                    validationErrors.Add("L'adresse From SMTP ne peut pas être vide");
+                }
+                else if (!EmailNotifier.IsValidEmailAddress(Smtp.From))
+                {
+                    validationErrors.Add($"L'adresse email SMTP From {Smtp.From} est invalide");
+                }
+
+                bool hasUsername = !string.IsNullOrWhiteSpace(Smtp.Username);
+                bool hasPassword = !string.IsNullOrWhiteSpace(Smtp.Password);
+                if (hasUsername != hasPassword)
+                {
+                    validationErrors.Add("SMTP Username et Password doivent être fournis ensemble");
+                }
             }
 
             HashSet<string> clientNames = (Clients ?? []).Where(c => !string.IsNullOrEmpty(c.Name)).Select(c => c.Name)
