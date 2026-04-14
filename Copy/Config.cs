@@ -49,12 +49,42 @@ namespace Copy
             using FileStream stream = new(path, FileMode.Open);
             using StreamReader reader = new(stream);
             string json = reader.ReadToEnd();
-            Config config = JsonConvert.DeserializeObject<Config>(json) ??
-                            throw new InvalidDataException("Cannot deserialize the configuration.");
+            List<string> deserializationErrors = [];
+            JsonSerializerSettings serializerSettings = new();
+            serializerSettings.Error += (_, args) =>
+            {
+                deserializationErrors.Add(args.ErrorContext.Error.Message);
+                args.ErrorContext.Handled = true;
+            };
+
+            Config? config;
+            try
+            {
+                config = JsonConvert.DeserializeObject<Config>(json, serializerSettings);
+            }
+            catch (JsonException ex)
+            {
+                deserializationErrors.Add(ex.Message);
+                throw new ConfigValidationException(deserializationErrors);
+            }
+
+            if (config == null)
+            {
+                deserializationErrors.Add("Cannot deserialize the configuration.");
+                throw new ConfigValidationException(deserializationErrors);
+            }
+
+            config.Clients ??= [];
+            config.Tasks ??= [];
 
             // Override with environment variables
             foreach (Client client in config.Clients)
             {
+                if (string.IsNullOrEmpty(client.Name))
+                {
+                    continue;
+                }
+
                 string prefix = $"COPY_CLIENT_{client.Name.ToUpper()}_";
                 string? host = Environment.GetEnvironmentVariable(prefix + "HOST");
                 if (!string.IsNullOrEmpty(host))
@@ -87,7 +117,11 @@ namespace Copy
             }
 
             // Validate the configuration
-            config.Validate();
+            List<string> validationErrors = config.GetValidationErrors();
+            if (deserializationErrors.Count > 0 || validationErrors.Count > 0)
+            {
+                throw new ConfigValidationException([.. deserializationErrors, .. validationErrors]);
+            }
 
             return config;
         }
@@ -207,24 +241,39 @@ namespace Copy
         /// <summary>
         ///     Validate the configuration
         /// </summary>
-        /// <exception cref="InvalidDataException">Thrown when configuration is invalid</exception>
+        /// <exception cref="ConfigValidationException">Thrown when configuration is invalid.</exception>
         public void Validate()
         {
+            List<string> validationErrors = GetValidationErrors();
+            if (validationErrors.Count > 0)
+            {
+                throw new ConfigValidationException(validationErrors);
+            }
+        }
+
+        /// <summary>
+        ///     Collect all validation errors found in the configuration.
+        /// </summary>
+        /// <returns>List of validation errors.</returns>
+        public List<string> GetValidationErrors()
+        {
+            List<string> validationErrors = [];
+
             if (Clients == null || Clients.Count == 0)
             {
-                throw new InvalidDataException("La configuration doit contenir au moins un client");
+                validationErrors.Add("La configuration doit contenir au moins un client");
             }
 
-            foreach (Client client in Clients)
+            foreach (Client client in Clients ?? [])
             {
                 if (string.IsNullOrEmpty(client.Name))
                 {
-                    throw new InvalidDataException("Le nom du client ne peut pas être vide");
+                    validationErrors.Add("Le nom du client ne peut pas être vide");
                 }
 
                 if (string.IsNullOrEmpty(client.Host))
                 {
-                    throw new InvalidDataException($"L'hôte du client {client.Name} ne peut pas être vide");
+                    validationErrors.Add($"L'hôte du client {client.Name} ne peut pas être vide");
                 }
 
                 // Validation spécifique selon le type de client
@@ -234,26 +283,26 @@ namespace Copy
                     case ClientType.Exchange:
                         if (string.IsNullOrEmpty(client.Username))
                         {
-                            throw new InvalidDataException(
+                            validationErrors.Add(
                                 $"Le nom d'utilisateur est requis pour le client {client.Name} de type {client.Type}");
                         }
 
                         if (string.IsNullOrEmpty(client.Password))
                         {
-                            throw new InvalidDataException($"Le mot de passe est requis pour le client {client.Name}");
+                            validationErrors.Add($"Le mot de passe est requis pour le client {client.Name}");
                         }
 
                         break;
                     case ClientType.SFTP:
                         if (string.IsNullOrEmpty(client.Username))
                         {
-                            throw new InvalidDataException(
+                            validationErrors.Add(
                                 $"Le nom d'utilisateur est requis pour le client {client.Name} de type {client.Type}");
                         }
 
                         if (string.IsNullOrEmpty(client.Password) && string.IsNullOrEmpty(client.PrivateKey))
                         {
-                            throw new InvalidDataException(
+                            validationErrors.Add(
                                 $"Un mot de passe ou une clé privée est requis pour le client {client.Name}");
                         }
 
@@ -263,49 +312,63 @@ namespace Copy
 
             if (Tasks == null || Tasks.Count == 0)
             {
-                throw new InvalidDataException("La configuration doit contenir au moins une tâche");
+                validationErrors.Add("La configuration doit contenir au moins une tâche");
             }
 
-            HashSet<string> clientNames = Clients.Select(c => c.Name).ToHashSet();
-            foreach (CopyTask task in Tasks)
+            HashSet<string> clientNames = (Clients ?? []).Where(c => !string.IsNullOrEmpty(c.Name)).Select(c => c.Name).ToHashSet()!;
+            foreach (CopyTask task in Tasks ?? [])
             {
-                if (string.IsNullOrEmpty(task.Source.Client))
+                if (task.Source == null)
                 {
-                    throw new InvalidDataException("La source de la tâche ne peut pas être vide");
+                    validationErrors.Add("La source de la tâche ne peut pas être vide");
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(task.Source.Client))
+                    {
+                        validationErrors.Add("La source de la tâche ne peut pas être vide");
+                    }
+                    else if (!clientNames.Contains(task.Source.Client))
+                    {
+                        validationErrors.Add($"Le client source {task.Source.Client} n'existe pas");
+                    }
                 }
 
-                if (string.IsNullOrEmpty(task.Destination.Client))
+                if (task.Destination == null)
                 {
-                    throw new InvalidDataException("La destination de la tâche ne peut pas être vide");
+                    validationErrors.Add("La destination de la tâche ne peut pas être vide");
                 }
-
-                if (!clientNames.Contains(task.Source.Client))
+                else
                 {
-                    throw new InvalidDataException($"Le client source {task.Source.Client} n'existe pas");
-                }
-
-                if (!clientNames.Contains(task.Destination.Client))
-                {
-                    throw new InvalidDataException($"Le client destination {task.Destination.Client} n'existe pas");
+                    if (string.IsNullOrEmpty(task.Destination.Client))
+                    {
+                        validationErrors.Add("La destination de la tâche ne peut pas être vide");
+                    }
+                    else if (!clientNames.Contains(task.Destination.Client))
+                    {
+                        validationErrors.Add($"Le client destination {task.Destination.Client} n'existe pas");
+                    }
                 }
 
                 if (task.MoveOriginalTo != null && string.IsNullOrEmpty(task.MoveOriginalTo.Client))
                 {
-                    throw new InvalidDataException("Le client MoveOriginalTo ne peut pas être vide");
+                    validationErrors.Add("Le client MoveOriginalTo ne peut pas être vide");
                 }
 
                 if (task.MoveOriginalTo != null && !clientNames.Contains(task.MoveOriginalTo.Client))
                 {
-                    throw new InvalidDataException(
+                    validationErrors.Add(
                         $"Le client MoveOriginalTo {task.MoveOriginalTo.Client} n'existe pas");
                 }
 
                 if (task.Delete && task.MoveOriginalTo != null)
                 {
-                    throw new InvalidDataException(
+                    validationErrors.Add(
                         "Une tâche ne peut pas utiliser Delete et MoveOriginalTo en même temps");
                 }
             }
+
+            return validationErrors;
         }
     }
 }
