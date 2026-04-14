@@ -32,6 +32,11 @@ namespace Copy.Types
 
             string trimmed = value.Trim();
 
+            if (TimeSpan.TryParse(trimmed, CultureInfo.InvariantCulture, out TimeSpan timeSpan))
+            {
+                return Normalize(DateTime.Now + timeSpan);
+            }
+
             if (DateTimeOffset.TryParse(trimmed, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
                     out DateTimeOffset offsetValue))
             {
@@ -42,11 +47,6 @@ namespace Copy.Types
                     out DateTime dateTime))
             {
                 return Normalize(dateTime);
-            }
-
-            if (TimeSpan.TryParse(trimmed, CultureInfo.InvariantCulture, out TimeSpan timeSpan))
-            {
-                return Normalize(DateTime.Now + timeSpan);
             }
 
             throw new JsonSerializationException(
