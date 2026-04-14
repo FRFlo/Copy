@@ -10,6 +10,9 @@ namespace Copy
 
         public static async Task Main(string[] args)
         {
+            string? runId = null;
+            string? configPath = null;
+
             try
             {
                 if (args.Length > 0)
@@ -25,17 +28,27 @@ namespace Copy
                     }
                 }
 
-                string configPath = args.Length > 0 ? args[0] : DefaultConfigPath;
+                configPath = args.Length > 0 ? args[0] : DefaultConfigPath;
                 Config config = Config.FromFile(configPath);
+                runId = $"run-{Guid.NewGuid():N}";
 
                 // Initialize logging
                 LoggerService.Initialize(config.Debug);
 
+                using IDisposable scope = Logger.BeginScope(("runId", runId));
+                Logger.Info($"Configuration loaded successfully from '{configPath}'");
+
                 CopyService copyService = new(config);
                 await copyService.ExecuteTasksAsync();
+                Logger.Info("Application run completed successfully");
             }
             catch (ConfigValidationException ex)
             {
+                if (!string.IsNullOrWhiteSpace(runId))
+                {
+                    Console.Error.WriteLine($"RunId: {runId}");
+                }
+
                 foreach (string error in ex.Errors)
                 {
                     Console.Error.WriteLine($"- {error}");
@@ -45,7 +58,8 @@ namespace Copy
             }
             catch (Exception ex)
             {
-                Logger.Error($"Application error: {ex.Message}");
+                using IDisposable scope = Logger.BeginScope(("runId", runId));
+                Logger.Error("Application error", ex);
                 Environment.Exit(1);
             }
             finally

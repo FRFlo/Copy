@@ -60,6 +60,30 @@ namespace Copy
     /// </summary>
     public static class Logger
     {
+        private sealed class LogScopeState(IReadOnlyDictionary<string, string> values, LogScopeState? parent)
+        {
+            public IReadOnlyDictionary<string, string> Values { get; } = values;
+            public LogScopeState? Parent { get; } = parent;
+        }
+
+        private sealed class LogScope(LogScopeState? previousState) : IDisposable
+        {
+            private bool _disposed;
+
+            public void Dispose()
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                _scope.Value = previousState;
+                _disposed = true;
+            }
+        }
+
+        private static readonly AsyncLocal<LogScopeState?> _scope = new();
+
         /// <summary>
         ///     Path to the log file.
         ///     <list type="bullet">
@@ -73,7 +97,7 @@ namespace Copy
         /// </summary>
         public static string LogFilePath { get; set; } = Path.Combine(Directory.GetCurrentDirectory(),
 #if DEBUG
-                                                                  "debug.log");
+            "debug.log");
 #else
             "production.log");
 #endif
@@ -81,6 +105,28 @@ namespace Copy
         ///     Indicates if the logger should write logs to the file.
         /// </summary>
         public static bool LogToFile { get; set; } = true;
+
+        /// <summary>
+        ///     Push contextual properties that will automatically be appended to every log line
+        ///     within the current async flow.
+        /// </summary>
+        /// <param name="properties">Properties to attach to the current log scope.</param>
+        /// <returns>A disposable scope that restores the previous context when disposed.</returns>
+        public static IDisposable BeginScope(params (string Key, string? Value)[] properties)
+        {
+            Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
+            foreach ((string key, string? value) in properties)
+            {
+                if (!string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(value))
+                {
+                    values[key] = value;
+                }
+            }
+
+            LogScopeState? previousState = _scope.Value;
+            _scope.Value = values.Count == 0 ? previousState : new LogScopeState(values, previousState);
+            return new LogScope(previousState);
+        }
 
         /// <summary>
         ///     Shows a message in the console and writes it to the log file.
@@ -94,6 +140,7 @@ namespace Copy
             ConsoleColor color = ConsoleColor.White, LoggerIcon? icon = null)
         {
             StringBuilder sb = new();
+            string contextPrefix = BuildContextPrefix();
             if (message.EndsWith('\n'))
             {
                 message = message[..^1];
@@ -117,10 +164,10 @@ namespace Copy
 
                     Console.BackgroundColor = ConsoleColor.Black;
                     Console.ForegroundColor = color;
-                    Console.WriteLine($" {line}");
+                    Console.WriteLine($" {contextPrefix}{line}");
                     Console.ResetColor();
 
-                    sb.Append($"{DateTime.Now:dd/MM/yyyy, HH:mm:fff} {prefix} {line}\n");
+                    sb.Append($"{DateTime.Now:dd/MM/yyyy, HH:mm:fff} {prefix} {contextPrefix}{line}\n");
                 }
             }
 
@@ -170,6 +217,63 @@ namespace Copy
         public static void Error(string message, LoggerIcon? icon = null)
         {
             Print("ERREUR", ConsoleColor.DarkRed, message, ConsoleColor.Red, icon);
+        }
+
+        /// <summary>
+        ///     Shows an error message together with the exception details.
+        /// </summary>
+        /// <param name="message">Message to show</param>
+        /// <param name="exception">Exception to print with stack trace</param>
+        /// <param name="icon">Icon to show before the message</param>
+        public static void Error(string message, Exception exception, LoggerIcon? icon = null)
+        {
+            Print("ERREUR", ConsoleColor.DarkRed, $"{message}{Environment.NewLine}{exception}", ConsoleColor.Red, icon);
+        }
+
+        private static string BuildContextPrefix()
+        {
+            LogScopeState? current = _scope.Value;
+            if (current == null)
+            {
+                return string.Empty;
+            }
+
+            Stack<LogScopeState> states = new();
+            while (current != null)
+            {
+                states.Push(current);
+                current = current.Parent;
+            }
+
+            Dictionary<string, string> merged = new(StringComparer.OrdinalIgnoreCase);
+            while (states.Count > 0)
+            {
+                foreach ((string key, string value) in states.Pop().Values)
+                {
+                    merged[key] = value;
+                }
+            }
+
+            if (merged.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            return string.Join(' ', merged
+                .OrderBy(entry => GetContextPriority(entry.Key))
+                .Select(entry => $"[{entry.Key}={entry.Value}]")
+                .ToArray()) + ' ';
+        }
+
+        private static int GetContextPriority(string key)
+        {
+            return key.ToLowerInvariant() switch
+            {
+                "runid" => 0,
+                "taskid" => 1,
+                "phase" => 2,
+                _ => 100
+            };
         }
     }
 
