@@ -4,6 +4,7 @@ namespace Copy.Types
 {
     internal class CopyService
     {
+        private readonly Dictionary<string, Client> _clientConfigurations;
         private readonly Dictionary<string, IClient> _clients;
         private readonly Dictionary<string, string[]> _clientTaskMap;
         private readonly Config _config;
@@ -12,7 +13,9 @@ namespace Copy.Types
         {
             _config = config;
             _clientTaskMap = BuildClientTaskMap();
-            _clients = InitializeClients();
+            _clientConfigurations = _config.Clients.ToDictionary(client => client.Name,
+                StringComparer.OrdinalIgnoreCase);
+            _clients = new Dictionary<string, IClient>(StringComparer.OrdinalIgnoreCase);
         }
 
         private Dictionary<string, string[]> BuildClientTaskMap()
@@ -37,36 +40,40 @@ namespace Copy.Types
                 StringComparer.OrdinalIgnoreCase);
         }
 
-        private Dictionary<string, IClient> InitializeClients()
+        private IClient GetClient(string clientName)
         {
-            Dictionary<string, IClient> clients = new();
-
-            foreach (Client client in _config.Clients)
+            if (_clients.TryGetValue(clientName, out IClient? existingClient))
             {
-                _clientTaskMap.TryGetValue(client.Name, out string[]? relatedTaskIds);
-                using IDisposable scope = Logger.BeginScope(
-                    ("phase", "client-init"),
-                    ("client", client.Name),
-                    ("clientType", client.Type.ToString()),
-                    ("host", client.Host),
-                    ("taskIds", relatedTaskIds is { Length: > 0 } ? string.Join(',', relatedTaskIds) : null));
-
-                Logger.Info("Initializing client connection");
-
-                IClient newClient = client.Type switch
-                {
-                    ClientType.FTP => new FTP(client),
-                    ClientType.SFTP => new SFTP(client),
-                    ClientType.Local => new Local(client),
-                    ClientType.Exchange => new Exchange(client),
-                    _ => throw new ArgumentOutOfRangeException($"Client type {client.Type} unknown")
-                };
-
-                Logger.Info("Client initialized successfully");
-                clients.Add(client.Name, newClient);
+                return existingClient;
             }
 
-            return clients;
+            if (!_clientConfigurations.TryGetValue(clientName, out Client? client))
+            {
+                throw new ClientNotFoundException($"Client {clientName} not found");
+            }
+
+            _clientTaskMap.TryGetValue(client.Name, out string[]? relatedTaskIds);
+            using IDisposable scope = Logger.BeginScope(
+                ("phase", "client-init"),
+                ("client", client.Name),
+                ("clientType", client.Type.ToString()),
+                ("host", client.Host),
+                ("taskIds", relatedTaskIds is { Length: > 0 } ? string.Join(',', relatedTaskIds) : null));
+
+            Logger.Info("Initializing client connection");
+
+            IClient newClient = client.Type switch
+            {
+                ClientType.FTP => new FTP(client),
+                ClientType.SFTP => new SFTP(client),
+                ClientType.Local => new Local(client),
+                ClientType.Exchange => new Exchange(client),
+                _ => throw new ArgumentOutOfRangeException($"Client type {client.Type} unknown")
+            };
+
+            Logger.Info("Client initialized successfully");
+            _clients[client.Name] = newClient;
+            return newClient;
         }
 
         public async Task ExecuteTasksAsync()
@@ -106,23 +113,13 @@ namespace Copy.Types
 
             Logger.Info("Starting workflow execution");
 
-            if (!_clients.TryGetValue(task.Source.Client, out IClient? sourceClient))
-            {
-                throw new ClientNotFoundException($"Source client {task.Source.Client} not found");
-            }
-
-            if (!_clients.TryGetValue(task.Destination.Client, out IClient? destinationClient))
-            {
-                throw new ClientNotFoundException($"Destination client {task.Destination.Client} not found");
-            }
+            IClient sourceClient = GetClient(task.Source.Client);
+            IClient destinationClient = GetClient(task.Destination.Client);
 
             IClient? moveOriginalClient = null;
             if (task.MoveOriginalTo != null)
             {
-                if (!_clients.TryGetValue(task.MoveOriginalTo.Client, out moveOriginalClient))
-                {
-                    throw new ClientNotFoundException($"MoveOriginalTo client {task.MoveOriginalTo.Client} not found");
-                }
+                moveOriginalClient = GetClient(task.MoveOriginalTo.Client);
             }
 
             Logger.Debug("Listing source files");
@@ -161,7 +158,8 @@ namespace Copy.Types
 
                     if (task.MoveOriginalTo != null)
                     {
-                        MoveOriginalFile(task.MoveOriginalTo, moveOriginalClient!, sourceClient, filePath, fileName, task.Overwrite);
+                        MoveOriginalFile(task.MoveOriginalTo, moveOriginalClient!, sourceClient, filePath, fileName,
+                            task.Overwrite);
                     }
 
                     if (task.Delete)
