@@ -58,8 +58,7 @@ namespace Copy
 
             using SmtpClient client = new(_smtp.Host, _smtp.Port)
             {
-                EnableSsl = _smtp.EnableSsl,
-                DeliveryMethod = SmtpDeliveryMethod.Network
+                EnableSsl = _smtp.EnableSsl, DeliveryMethod = SmtpDeliveryMethod.Network
             };
 
             if (!string.IsNullOrWhiteSpace(_smtp.Username))

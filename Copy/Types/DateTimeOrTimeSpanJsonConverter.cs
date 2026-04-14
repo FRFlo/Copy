@@ -13,7 +13,8 @@ namespace Copy.Types
                 JsonToken.Null => throw new JsonSerializationException("CreatedAfter cannot be null."),
                 JsonToken.Date => Normalize(Convert.ToDateTime(reader.Value, CultureInfo.InvariantCulture)),
                 JsonToken.String => ParseStringValue(Convert.ToString(reader.Value, CultureInfo.InvariantCulture)!),
-                _ => throw new JsonSerializationException($"CreatedAfter must be a date or string, got {reader.TokenType}.")
+                _ => throw new JsonSerializationException(
+                    $"CreatedAfter must be a date or string, got {reader.TokenType}.")
             };
         }
 
@@ -37,7 +38,8 @@ namespace Copy.Types
                 return offsetValue.LocalDateTime;
             }
 
-            if (DateTime.TryParse(trimmed, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime dateTime))
+            if (DateTime.TryParse(trimmed, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal,
+                    out DateTime dateTime))
             {
                 return Normalize(dateTime);
             }
@@ -60,6 +62,5 @@ namespace Copy.Types
                 _ => DateTime.SpecifyKind(value, DateTimeKind.Local)
             };
         }
-
     }
 }

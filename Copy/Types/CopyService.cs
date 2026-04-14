@@ -157,7 +157,7 @@ namespace Copy.Types
 
                     if (task.MoveOriginalTo != null)
                     {
-                        MoveOriginalFile(task.MoveOriginalTo, moveOriginalClient!, sourceClient, filePath, fileName);
+                        MoveOriginalFile(task.MoveOriginalTo, moveOriginalClient!, sourceClient, filePath, fileName, task.Overwrite);
                     }
 
                     if (task.Delete)
@@ -183,7 +183,7 @@ namespace Copy.Types
         }
 
         private static void MoveOriginalFile(CopyIO moveOriginalTo, IClient moveOriginalClient, IClient sourceClient,
-            string sourcePath, string fileName)
+            string sourcePath, string fileName, bool overwrite)
         {
             string moveDestinationPath = Path.Combine(moveOriginalTo.Path, fileName);
             using IDisposable scope = Logger.BeginScope(
@@ -191,6 +191,13 @@ namespace Copy.Types
                 ("moveOriginalPath", moveDestinationPath));
 
             Logger.Info("Moving original file after successful transfer");
+
+            if (!overwrite && moveOriginalClient.DoFileExist(moveDestinationPath))
+            {
+                Logger.Warn(
+                    "Archive destination file already exists and overwrite is disabled; keeping original file in place");
+                return;
+            }
 
             if (ReferenceEquals(sourceClient, moveOriginalClient))
             {
