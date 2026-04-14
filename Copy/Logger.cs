@@ -172,7 +172,7 @@ namespace Copy
         /// <param name="color">Color of the message</param>
         /// <param name="icon">Icon to show before the message</param>
         private static void Print(string prefix, ConsoleColor prefixColor, string message,
-            ConsoleColor color = ConsoleColor.White, LoggerIcon? icon = null)
+            ConsoleColor color = ConsoleColor.White, LoggerIcon? icon = null, string? notificationMessage = null)
         {
             StringBuilder sb = new();
             IReadOnlyDictionary<string, string> contextValues = GetCurrentContextValues();
@@ -214,7 +214,7 @@ namespace Copy
                 File.AppendAllText(LogFilePath, final, Encoding.UTF8);
             }
 
-            TrySendNotification(prefix, contextPrefix, message, contextValues);
+            TrySendNotification(prefix, contextPrefix, notificationMessage ?? message, contextValues);
         }
 
         /// <summary>
@@ -265,7 +265,8 @@ namespace Copy
         /// <param name="icon">Icon to show before the message</param>
         public static void Error(string message, Exception exception, LoggerIcon? icon = null)
         {
-            Print("ERREUR", ConsoleColor.DarkRed, $"{message}{Environment.NewLine}{exception}", ConsoleColor.Red, icon);
+            Print("ERREUR", ConsoleColor.DarkRed, $"{message}{Environment.NewLine}{exception}", ConsoleColor.Red, icon,
+                message);
         }
 
         internal static void FlushTaskNotifications(string taskId)
