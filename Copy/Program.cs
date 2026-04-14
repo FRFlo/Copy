@@ -45,10 +45,15 @@ namespace Copy
             }
             catch (ConfigValidationException ex)
             {
+                ConfigureNotificationsForStartupFailures(configPath);
+
                 if (!string.IsNullOrWhiteSpace(runId))
                 {
                     Console.Error.WriteLine($"RunId: {runId}");
                 }
+
+                using IDisposable scope = Logger.BeginScope(("runId", runId), ("configPath", configPath));
+                Logger.Error("Configuration validation failed", ex);
 
                 foreach (string error in ex.Errors)
                 {
@@ -59,6 +64,7 @@ namespace Copy
             }
             catch (Exception ex)
             {
+                ConfigureNotificationsForStartupFailures(configPath);
                 using IDisposable scope = Logger.BeginScope(("runId", runId));
                 Logger.Error("Application error", ex);
                 Environment.Exit(1);
@@ -85,6 +91,90 @@ namespace Copy
         {
             Config.FromFile(configPath);
             Console.WriteLine($"Configuration '{configPath}' is valid.");
+        }
+
+        private static void ConfigureNotificationsForStartupFailures(string? configPath)
+        {
+            try
+            {
+                string[] recipients = [];
+                SmtpSettings? smtp = null;
+
+                if (!string.IsNullOrWhiteSpace(configPath) && File.Exists(configPath))
+                {
+                    JsonSerializerSettings serializerSettings = new();
+                    serializerSettings.Error += (_, args) => { args.ErrorContext.Handled = true; };
+
+                    Config? config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(configPath), serializerSettings);
+                    recipients = EmailNotifier.NormalizeRecipients(config?.MailTo)
+                        .Where(EmailNotifier.IsValidEmailAddress)
+                        .ToArray();
+                    smtp = config?.Smtp;
+                }
+
+                bool hasSmtpEnvironmentOverride =
+                    !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("COPY_SMTP_HOST")) ||
+                    !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("COPY_SMTP_USERNAME")) ||
+                    !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("COPY_SMTP_PASSWORD")) ||
+                    !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("COPY_SMTP_FROM")) ||
+                    !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("COPY_SMTP_PORT")) ||
+                    !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("COPY_SMTP_ENABLESSL"));
+
+                if (smtp == null && hasSmtpEnvironmentOverride)
+                {
+                    smtp = new SmtpSettings();
+                }
+
+                if (smtp != null)
+                {
+                    string? smtpHost = Environment.GetEnvironmentVariable("COPY_SMTP_HOST");
+                    if (!string.IsNullOrWhiteSpace(smtpHost))
+                    {
+                        smtp.Host = smtpHost;
+                    }
+
+                    string? smtpUsername = Environment.GetEnvironmentVariable("COPY_SMTP_USERNAME");
+                    if (!string.IsNullOrWhiteSpace(smtpUsername))
+                    {
+                        smtp.Username = smtpUsername;
+                    }
+
+                    string? smtpPassword = Environment.GetEnvironmentVariable("COPY_SMTP_PASSWORD");
+                    if (!string.IsNullOrWhiteSpace(smtpPassword))
+                    {
+                        smtp.Password = smtpPassword;
+                    }
+
+                    string? smtpFrom = Environment.GetEnvironmentVariable("COPY_SMTP_FROM");
+                    if (!string.IsNullOrWhiteSpace(smtpFrom))
+                    {
+                        smtp.From = smtpFrom;
+                    }
+
+                    if (int.TryParse(Environment.GetEnvironmentVariable("COPY_SMTP_PORT"), out int smtpPort))
+                    {
+                        smtp.Port = smtpPort;
+                    }
+
+                    if (bool.TryParse(Environment.GetEnvironmentVariable("COPY_SMTP_ENABLESSL"), out bool smtpEnableSsl))
+                    {
+                        smtp.EnableSsl = smtpEnableSsl;
+                    }
+                }
+
+                if (smtp != null &&
+                    !string.IsNullOrWhiteSpace(smtp.Host) &&
+                    smtp.Port > 0 &&
+                    !string.IsNullOrWhiteSpace(smtp.From) &&
+                    EmailNotifier.IsValidEmailAddress(smtp.From))
+                {
+                    Logger.ConfigureNotifications(smtp, recipients);
+                }
+            }
+            catch
+            {
+                // Best-effort startup notification bootstrap: never hide the original failure.
+            }
         }
     }
 }
