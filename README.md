@@ -208,9 +208,15 @@ General variables:
 
 | Variable | Purpose |
 |---|---|
-| `DEBUG` | Enables debug logging when set to `true` |
+| `LOG_LEVEL` | Sets the minimum log level: `debug`, `info` (default), `warn`, or `error` |
+| `LOG_FORMAT` | Sets the output format to `text` (default) or `json` |
 | `CONFIG_PATH` | Defined in code and the Docker image as a config path value |
 | `SCHEME_PATH` | Defined in code and the Docker image as a schema path value |
+
+The Go logging package reads these settings when creating a logger with
+`logging.NewFromEnv`. It uses Go's `log/slog`, so values such as file paths and
+copy durations can be emitted as structured attributes and included in JSON
+output. For example, `logger.Info("copy completed", "path", path, "duration", elapsed)`.
 
 Client overrides use this pattern:
 
