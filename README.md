@@ -59,7 +59,7 @@ Notes:
 
 - `Name` is how tasks refer to a client.
 - Client name matching is case-insensitive at runtime.
-- `Fingerprint` is optional for FTP and SFTP. If you do not set it, the server certificate or host key is accepted automatically.
+- For SFTP, always set `Fingerprint` in production. The current SFTP client accepts any host key when it is omitted, which leaves the connection vulnerable to a man-in-the-middle attack. Obtain the expected fingerprint through a trusted channel and verify it before configuring it. FTP fingerprint validation is also optional; the FTP client accepts the server certificate when it is omitted.
 - `Autodiscover` only applies to `Exchange`.
 - `Exchange` can be configured, but file operations in the current implementation are not implemented yet.
 
@@ -200,9 +200,9 @@ Example:
 }
 ```
 
-### 5. Keep secrets in environment variables when deploying
+### 5. Keep secrets out of configuration files when deploying
 
-The application supports targeted overrides from environment variables. This is the safest way to inject passwords, private keys, or deployment-specific hosts without changing `config.json`.
+Do not commit passwords, private key contents, or SMTP credentials in `config.json`. The application supports targeted environment variable overrides for credentials. In production, inject these values from your deployment platform's secret store; environment variables can still be exposed through process inspection or diagnostic tools. For private keys, store the key in a secret file and set `PrivateKey` to its path.
 
 General variables:
 
@@ -221,6 +221,8 @@ COPY_CLIENT_<CLIENT_NAME_UPPERCASE>_PASSWORD
 COPY_CLIENT_<CLIENT_NAME_UPPERCASE>_PRIVATEKEY
 COPY_CLIENT_<CLIENT_NAME_UPPERCASE>_PORT
 ```
+
+`Fingerprint` currently has no environment variable override, so configure it in `config.json`. It is a host identity value, not a credential, and must be present for production SFTP connections.
 
 Example for a client named `PartnerSftp`:
 
