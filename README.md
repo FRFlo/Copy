@@ -44,7 +44,6 @@ Supported client types are:
 - `FTP`
 - `SFTP`
 - `Local`
-- `Exchange`
 
 Use these rules for each type:
 
@@ -53,15 +52,12 @@ Use these rules for each type:
 | `Local` | `Type`, `Name`, `Host` | `Port` | `0` |
 | `FTP` | `Type`, `Name`, `Host`, `Username`, `Password` | `Port`, `Fingerprint` | `21` |
 | `SFTP` | `Type`, `Name`, `Host`, `Username`, and either `Password` or `PrivateKey` | `Port`, `Fingerprint` | `22` |
-| `Exchange` | `Type`, `Name`, `Host`, `Username`, `Password` | `Port`, `Autodiscover` | `443` |
 
 Notes:
 
 - `Name` is how tasks refer to a client.
 - Client name matching is case-insensitive at runtime.
 - For SFTP, always set `Fingerprint` in production. The current SFTP client accepts any host key when it is omitted, which leaves the connection vulnerable to a man-in-the-middle attack. Obtain the expected fingerprint through a trusted channel and verify it before configuring it. FTP fingerprint validation is also optional; the FTP client accepts the server certificate when it is omitted.
-- `Autodiscover` only applies to `Exchange`.
-- `Exchange` can be configured, but file operations in the current implementation are not implemented yet.
 
 Example:
 
@@ -406,4 +402,3 @@ Because the application entrypoint is `Copy.exe`, pass the config file path expl
 - FTP, SFTP, and Local destinations are created automatically when needed.
 - If `Overwrite` is `false`, existing destination files are skipped.
 - If `MoveOriginalTo` points to the same client as the source, the file is moved in place; otherwise the file is copied to the archive location and then deleted from the source.
-- Exchange authentication can be configured, but file operations currently throw `NotImplementedException`.
